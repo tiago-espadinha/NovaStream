@@ -1,0 +1,63 @@
+@layer base {
+  :root {
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+  html {
+    scroll-padding-top: env(safe-area-inset-top, 0px);
+    /* Room under the floating account notices while any are showing (set by AccountNotices). */
+    scroll-padding-bottom: var(--notice-space, 0px);
+    height: 100%;
+    background: var(--color-bg);
+  }
+  body {
+    min-height: 100%;
+    margin: 0;
+    background: var(--color-page-glow), var(--color-bg);
+    background-repeat: no-repeat;
+    color: var(--color-text);
+    font-family: var(--font-body);
+    font-size: var(--font-size-body);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-weight: 600;
+    line-height: 1.15;
+    margin: 0;
+  }
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-focus);
+    outline-offset: 2px;
+  }
+  /* Full-height column so the footer rests at the bottom of short pages. */
+  #root {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  main {
+    flex: 1 0 auto;
+    width: 100%;
+    max-width: var(--layout-max);
+    margin: 0 auto;
+    padding: var(--space-6) var(--layout-gutter) var(--space-16);
+  }
+}

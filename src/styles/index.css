@@ -1,0 +1,7 @@
+/* The layer order, declared once: a later layer wins whatever the selectors' specificity. Every rule sits in one. */
+@layer tokens, base, primitives, components, screens;
+
+@import './tokens.css';
+@import './base.css';
+@import './primitives.css';
+@import '../screens/account/account.css';
