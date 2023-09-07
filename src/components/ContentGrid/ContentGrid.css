@@ -1,0 +1,11 @@
+@layer components {
+  /* results grid */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(160px, calc(50% - var(--space-2))), 1fr));
+    gap: var(--space-6) var(--space-4);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+}

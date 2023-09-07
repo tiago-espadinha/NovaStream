@@ -52,4 +52,20 @@
     border-color: var(--color-text);
     background: var(--color-surface-glass);
   }
+  .empty-state {
+    color: var(--color-text-muted);
+    padding: var(--space-6) 0;
+  }
+  .empty-state p {
+    margin: 0 0 var(--space-4);
+  }
+  .empty-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .svg {
+    height: 18px;
+    width: 18px;
+  }
 }

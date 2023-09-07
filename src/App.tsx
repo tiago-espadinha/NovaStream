@@ -1,3 +1,26 @@
+import { ContentGrid } from './components/ContentGrid/ContentGrid';
+import { mockContent } from './data/mockData';
+import './screens/home/ResultsSection.css';
+import './components/SiteFooter/SiteFooter.css';
+
 export default function App() {
-  return <h1>Nova Stream</h1>;
+  return (
+    <>
+      <main>
+        <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
+        <section className="results" aria-labelledby="results-title">
+          <div className="results-head">
+            <div>
+              <h2 id="results-title">Browse tonight</h2>
+              <p className="results-count">{mockContent.length} titles</p>
+            </div>
+          </div>
+
+          <ContentGrid items={mockContent} />
+        </section>
+      </main>
+
+      <footer className="site-footer">Nova Stream — a React + TypeScript frontend.</footer>
+    </>
+  );
 }

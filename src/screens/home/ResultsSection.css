@@ -1,0 +1,19 @@
+@layer screens {
+  /* results header, toolbar and states */
+  .results-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+  }
+  .results-head h2 {
+    font-size: var(--font-size-h2);
+  }
+  .results-count {
+    margin: var(--space-1) 0 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+  }
+}
