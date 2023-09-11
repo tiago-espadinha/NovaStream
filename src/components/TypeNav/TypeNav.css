@@ -1,0 +1,35 @@
+@layer components {
+  nav.types {
+    display: flex;
+    gap: var(--space-1);
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  nav.types::-webkit-scrollbar {
+    display: none;
+  }
+  nav.types button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: var(--space-1) var(--space-4);
+    border: 1px solid transparent;
+    border-radius: var(--radius-pill);
+    background: none;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-control);
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      color var(--transition-fast),
+      background-color var(--transition-fast);
+  }
+  nav.types button:hover {
+    color: var(--color-text);
+    background: var(--color-surface-glass);
+  }
+  nav.types button.active {
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+  }
+}
