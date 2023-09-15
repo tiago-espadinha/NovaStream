@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
+import { searchRouter } from './routes/search.js';
 
 const app = express();
 
@@ -8,6 +9,8 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || 'http://localhost:5173' }));
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
+app.use('/api/search', searchRouter);
 
 // Centralized error handler as a safety net for anything a route didn't catch itself.
 app.use((err, _req, res, _next) => {
