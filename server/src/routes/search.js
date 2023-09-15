@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { searchMovies, searchTv } from '../services/tmdb.js';
+import { searchBooks } from '../services/openLibrary.js';
+import { searchGames } from '../services/rawg.js';
 import { searchAcross } from '../services/searchAcross.js';
 
 export const searchRouter = Router();
@@ -9,9 +11,11 @@ const MAX_QUERY_LENGTH = 200;
 const SEARCHERS = {
   movie: searchMovies,
   tv: searchTv,
+  book: searchBooks,
+  game: searchGames,
 };
 
-// GET /api/search?q=dune&type=all|movie|tv
+// GET /api/search?q=dune&type=all|movie|tv|book|game
 searchRouter.get('/', async (req, res) => {
   const q = String(req.query.q || '').trim();
   const type = String(req.query.type || 'all');
