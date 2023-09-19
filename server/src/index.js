@@ -2,6 +2,7 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import { searchRouter } from './routes/search.js';
+import { mediaRouter } from './routes/media.js';
 
 const app = express();
 
@@ -11,6 +12,7 @@ app.use(express.json());
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/search', searchRouter);
+app.use('/api/media', mediaRouter);
 
 // Centralized error handler as a safety net for anything a route didn't catch itself.
 app.use((err, _req, res, _next) => {
