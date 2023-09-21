@@ -1,0 +1,14 @@
+@layer components {
+  .notice-error p::before {
+    content: '✖ ' / '';
+    color: var(--color-danger);
+  }
+  .notice-warning p::before {
+    content: '⚠ ' / '';
+    color: var(--color-secondary);
+  }
+  .notice-success p::before {
+    content: '✓ ' / '';
+    color: var(--color-success);
+  }
+}
