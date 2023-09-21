@@ -1,0 +1,18 @@
+@layer screens {
+  /* live mode introduction */
+  .intro {
+    margin-bottom: var(--space-10);
+    padding: var(--space-10) 0 var(--space-8);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .intro h2 {
+    font-size: var(--font-size-h1);
+    line-height: 1;
+    margin-bottom: var(--space-3);
+  }
+  .intro p:last-child {
+    max-width: 56ch;
+    margin: 0;
+    color: var(--color-text-muted);
+  }
+}
