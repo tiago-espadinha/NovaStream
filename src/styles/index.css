@@ -267,6 +267,23 @@ main {
   border-color: var(--color-text);
   background: var(--color-surface-glass);
 }
+/* live mode introduction */
+.intro {
+  margin-bottom: var(--space-10);
+  padding: var(--space-10) 0 var(--space-8);
+  border-bottom: 1px solid var(--color-border);
+}
+.intro h2 {
+  font-size: var(--font-size-h1);
+  line-height: 1;
+  margin-bottom: var(--space-3);
+}
+.intro p:last-child {
+  max-width: 56ch;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
 /* results header, toolbar and states */
 .results-head {
   display: flex;
@@ -295,6 +312,50 @@ main {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+}
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  font-size: var(--font-size-small);
+}
+.notice p {
+  margin: 0;
+}
+.notice-error {
+  border-color: var(--color-danger);
+  background: var(--color-danger-surface);
+}
+.notice-error p::before {
+  content: "✖ " / "";
+  color: var(--color-danger);
+}
+.notice-warning {
+  border-color: var(--color-border-secondary);
+  background: var(--color-surface-secondary);
+}
+.notice-warning p::before {
+  content: "⚠ " / "";
+  color: var(--color-secondary);
+}
+.notice-success {
+  border-color: var(--color-success);
+  background: var(--color-success-surface);
+}
+.notice-success p::before {
+  content: "✓ " / "";
+  color: var(--color-success);
+}
+.notice-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 /* results grid */
 .grid {
