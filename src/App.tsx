@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
+import { MediaDetail } from './components/MediaDetail';
 import { mockContent } from './data/mockData';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
-import { CONTENT_TYPE_LABELS, type ContentType, type MediaSummary } from './types';
+import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary } from './types';
 import { describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
@@ -18,11 +19,14 @@ function headingFor(query: string, awaitingLiveQuery: boolean, activeType: Conte
 export default function App() {
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
   const [query, setQuery] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const [liveResults, setLiveResults] = useState<MediaSummary[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<LiveProblem | null>(null);
   const [searchAttempt, setSearchAttempt] = useState(0);
+
+  const [detail, setDetail] = useState<ContentItem | null>(null);
 
   // --- search ---
   useEffect(() => {
@@ -72,6 +76,31 @@ export default function App() {
         (!USE_MOCK || !q || item.title.toLowerCase().includes(q)),
     );
   }, [filterItems, activeType, query]);
+
+  // --- detail screen ---
+  useEffect(() => {
+    if (!selectedId) {
+      setDetail(null);
+      return;
+    }
+    const mockMatch = mockContent.find((item) => item.id === selectedId);
+    if (mockMatch) {
+      setDetail(mockMatch);
+      return;
+    }
+    // Live id is shaped "type-externalId" (see server/src/services/normalize.js)
+    const [type, ...rest] = selectedId.split('-');
+    const externalId = rest.join('-');
+    let active = true;
+    setDetail(null);
+    api
+      .getMediaDetail(type as ContentType, externalId)
+      .then((item) => active && setDetail(item))
+      .catch(() => active && setSelectedId(null));
+    return () => {
+      active = false;
+    };
+  }, [selectedId]);
 
   const trimmedQuery = query.trim();
   const awaitingLiveQuery = !USE_MOCK && !trimmedQuery;
@@ -151,12 +180,27 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <ContentGrid items={displayedItems} />
+            <ContentGrid items={displayedItems} onSelect={setSelectedId} />
           )}
         </section>
       </main>
 
       <footer className="site-footer">Nova Stream — a React + TypeScript frontend with a real API-backed server.</footer>
+
+      {selectedId && (
+        <>
+          {detail && (
+            <MediaDetail
+              item={detail}
+              onSearchTerm={(searchQuery) => {
+                setQuery(searchQuery);
+                setSelectedId(null);
+              }}
+              onClose={() => setSelectedId(null)}
+            />
+          )}
+        </>
+      )}
     </>
   );
 }

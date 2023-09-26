@@ -1,0 +1,148 @@
+import { useDialog } from "../hooks/useDialog";
+import type { ContentItem } from "../types";
+import { mediaTypeLabel } from "../utils/discovery";
+import { fallbackArtwork } from "../utils/gradient";
+import { ScoreBadge } from "./ScoreBadge";
+
+interface MediaDetailProps {
+  item: ContentItem;
+  onSearchTerm: (query: string) => void;
+  onClose: () => void;
+}
+
+export function MediaDetail({
+  item,
+  onSearchTerm,
+  onClose,
+}: MediaDetailProps) {
+  const panelRef = useDialog<HTMLDivElement>(onClose);
+  const streamingPlatforms = item.platforms
+    .filter((platform) => platform.startsWith("Streaming on "))
+    .map((platform) => platform.slice("Streaming on ".length));
+  const genres = item.genres.filter(
+    (genre) => !item.tags?.some((tag) => tag.toLowerCase() === genre.toLowerCase()),
+  );
+
+  return (
+    <div className="dialog-backdrop detail-backdrop" onClick={onClose}>
+      <div
+        ref={panelRef}
+        className="detail-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="detail-title"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button type="button" className="icon-button detail-close" aria-label="Close details" onClick={onClose}>
+          <span aria-hidden="true">✕</span>
+        </button>
+
+        <div className="detail-hero">
+          {item.posterUrl && (
+            <div className="detail-hero-backdrop">
+              <img src={item.posterUrl} alt="" />
+            </div>
+          )}
+          <div className="detail-art">
+            {item.posterUrl ? (
+              <img src={item.posterUrl} alt="" />
+            ) : (
+              <div className="detail-fallback" style={fallbackArtwork(item)} aria-hidden="true" />
+            )}
+          </div>
+          <div className="detail-heading">
+            <p className="eyebrow">{mediaTypeLabel(item)}</p>
+            <h2 id="detail-title">{item.title}</h2>
+            <p className="detail-subline">
+              <ScoreBadge item={item} fallback="Not yet rated" />
+              {item.releaseYear != null && <span>{item.releaseYear}</span>}
+              {item.runtime && <span>{item.runtime}</span>}
+            </p>
+          </div>
+        </div>
+
+        <div className="detail-body">
+          {(genres.length > 0 || (item.tags ?? []).length > 0) && (
+            <div className="detail-genres" aria-label="Search by genre or tag" role="group">
+              {genres.map((g) => (
+                <button type="button" className="genre-chip" key={`genre-${g}`} onClick={() => onSearchTerm(g)}>
+                  {g}
+                </button>
+              ))}
+              {(item.tags ?? []).map((tag) => (
+                <button
+                  type="button"
+                  className="genre-chip tag-chip"
+                  key={`tag-${tag}`}
+                  onClick={() => onSearchTerm(tag)}
+                >
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <h3 className="meta-label">Overview</h3>
+          <p className="detail-overview">{item.overview || "No synopsis available."}</p>
+
+          <dl className="detail-meta-grid">
+            {item.musicKind !== "artist" && item.creator && (
+              <div>
+                <dt className="meta-label">{item.creatorLabel}</dt>
+                <dd className="meta-value">{item.creator}</dd>
+              </div>
+            )}
+            {item.cast && item.cast.length > 0 && (
+              <div>
+                <dt className="meta-label">Cast</dt>
+                <dd className="meta-value">{item.cast.join(", ")}</dd>
+              </div>
+            )}
+            {item.playStats && (
+              <>
+                <div>
+                  <dt className="meta-label">Plays</dt>
+                  <dd className="meta-value">{item.playStats.playcount}</dd>
+                </div>
+                <div>
+                  <dt className="meta-label">Listeners</dt>
+                  <dd className="meta-value">{item.playStats.listeners}</dd>
+                </div>
+              </>
+            )}
+          </dl>
+
+          {item.tracklist && (
+            <section className="detail-section" aria-labelledby="tracklist-title">
+              <h3 id="tracklist-title" className="meta-label">Tracklist</h3>
+              <ol className="tracklist">
+                {item.tracklist.map((track, index) => (
+                  <li className="track-row" key={`${track.name}-${index}`}>
+                    <span className="track-number">{index + 1}</span>
+                    <span className="track-name">{track.name}</span>
+                    <span className="track-duration">{track.duration || "—"}</span>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
+
+          {(item.type === "movie" || item.type === "tv") && streamingPlatforms.length > 0 && (
+            <section className="detail-section" aria-labelledby="streaming-title">
+              <h3 id="streaming-title" className="meta-label">Streaming</h3>
+              <ul className="platform-chips">
+                {streamingPlatforms.map((platform) => (
+                  <li className="platform-chip" key={platform}>
+                    {platform}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+        </div>
+      </div>
+    </div>
+  );
+}

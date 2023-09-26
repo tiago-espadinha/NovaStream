@@ -5,10 +5,12 @@ import { ScoreBadge } from "./ScoreBadge";
 
 interface ContentCardProps {
   item: MediaSummary;
+  onSelect: (id: string) => void;
 }
 
 export function ContentCard({
   item,
+  onSelect,
 }: ContentCardProps) {
   return (
     <article className="card">
@@ -23,7 +25,11 @@ export function ContentCard({
       </div>
       <div className="card-body">
         <span className="card-type">{mediaTypeLabel(item)}</span>
-        <h3 className="card-title">{item.title}</h3>
+        <h3 className="card-title">
+          <button type="button" className="card-open" onClick={() => onSelect(item.id)}>
+            {item.title}
+          </button>
+        </h3>
         {item.artist && <p className="card-sub">{item.artist}</p>}
         <div className="card-meta">
           <ScoreBadge item={item} />
