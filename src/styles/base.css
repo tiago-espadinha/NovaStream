@@ -60,4 +60,8 @@
     margin: 0 auto;
     padding: var(--space-6) var(--layout-gutter) var(--space-16);
   }
+  li::marker {
+    color: var(--color-text-muted);
+    text-indent: 14px !important;
+  }
 }
