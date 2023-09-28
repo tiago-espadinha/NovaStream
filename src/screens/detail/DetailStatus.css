@@ -1,0 +1,17 @@
+@layer screens {
+  /* detail loading / error */
+  .detail-status {
+    width: min(440px, 100%);
+  }
+  .detail-status [role='alert'] {
+    padding: var(--space-6) var(--space-6) 0;
+  }
+  .detail-status h2 {
+    font-size: var(--font-size-h2);
+    margin-bottom: var(--space-2);
+  }
+  .detail-status p {
+    margin: 0 0 var(--space-4);
+    color: var(--color-text-muted);
+  }
+}
