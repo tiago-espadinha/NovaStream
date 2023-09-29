@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useDialog } from '../../hooks/useDialog';
 import type { ContentItem } from '../../types';
 import { mediaTypeLabel } from '../../utils/discovery';
 import { fallbackArtwork } from '../../utils/gradient';
 import { ScoreBadge } from '../../components/ScoreBadge/ScoreBadge';
+import { ArtworkViewer } from './ArtworkViewer';
 import './MediaDetail.css';
 
 interface MediaDetailProps {
@@ -13,6 +15,7 @@ interface MediaDetailProps {
 
 export function MediaDetail({ item, onSearchTerm, onClose }: MediaDetailProps) {
   const panelRef = useDialog<HTMLDivElement>(onClose);
+  const [viewingArtwork, setViewingArtwork] = useState(false);
   const streamingPlatforms = item.platforms
     .filter((platform) => platform.startsWith('Streaming on '))
     .map((platform) => platform.slice('Streaming on '.length));
@@ -41,7 +44,14 @@ export function MediaDetail({ item, onSearchTerm, onClose }: MediaDetailProps) {
           )}
           <div className="detail-art">
             {item.posterUrl ? (
-              <img src={item.posterUrl} alt="" />
+              <button
+                type="button"
+                className="detail-art-open"
+                aria-label={`View full artwork for ${item.title}`}
+                onClick={() => setViewingArtwork(true)}
+              >
+                <img src={item.posterUrl} alt="" />
+              </button>
             ) : (
               <div className="detail-fallback" style={fallbackArtwork(item)} aria-hidden="true" />
             )}
@@ -140,6 +150,9 @@ export function MediaDetail({ item, onSearchTerm, onClose }: MediaDetailProps) {
             </section>
           )}
         </div>
+        {viewingArtwork && item.posterUrl && (
+          <ArtworkViewer src={item.posterUrl} title={item.title} onClose={() => setViewingArtwork(false)} />
+        )}
       </div>
     </div>
   );
