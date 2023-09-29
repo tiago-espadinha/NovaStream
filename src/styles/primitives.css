@@ -52,6 +52,21 @@
     border-color: var(--color-text);
     background: var(--color-surface-glass);
   }
+  .icon-button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border: 1px solid var(--color-border-strong);
+    border-radius: 50%;
+    background: var(--color-scrim);
+    color: var(--color-text);
+    cursor: pointer;
+  }
+  .icon-button:hover {
+    border-color: var(--color-text);
+  }
   .empty-state {
     color: var(--color-text-muted);
     padding: var(--space-6) 0;
@@ -95,6 +110,65 @@
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-2);
+  }
+  /* dialogs (filter, detail status) */
+  .dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 30;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-6) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom, 0px));
+    background: var(--color-overlay-backdrop);
+    backdrop-filter: blur(3px);
+  }
+  .dialog-panel {
+    width: min(720px, 100%);
+    max-height: min(86vh, 760px);
+    display: flex;
+    flex-direction: column;
+    background: var(--color-overlay-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-modal);
+    animation: dialog-in var(--transition-medium);
+  }
+  @keyframes dialog-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+  .dialog-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-5) var(--space-6);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .dialog-header h2 {
+    font-size: var(--font-size-h2);
+  }
+  .dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--color-border);
+  }
+  .meta-label {
+    display: block;
+    margin: 0 0 var(--space-1);
+    padding: 0;
+    color: var(--color-text-muted);
+    font-family: var(--font-body);
+    font-size: var(--font-size-label);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
   }
   .svg {
     height: 18px;
