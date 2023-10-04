@@ -3,6 +3,8 @@ import { useEffect, useRef } from 'react';
 // Open dialog panels, innermost last; only the top one responds to Escape and Tab.
 const openPanels: HTMLElement[] = [];
 
+export const isDialogOpen = () => openPanels.length > 0;
+
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
 
