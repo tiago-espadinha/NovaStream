@@ -1,5 +1,11 @@
+import { useEffect, useRef } from 'react';
+import { isDialogOpen } from '../hooks/useDialog';
 import type { ContentType } from '../types';
+import { isMacPlatform, isSearchShortcut, searchShortcutLabels } from '../utils/searchShortcut';
 import { TypeNav } from './TypeNav';
+
+const isMac = isMacPlatform();
+const shortcut = searchShortcutLabels(isMac);
 
 interface HeaderProps {
   activeType: ContentType | 'all';
@@ -14,6 +20,19 @@ export function Header({
   query,
   onQueryChange,
 }: HeaderProps) {
+  const searchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (!isSearchShortcut(event, isMac) || isDialogOpen()) return;
+      event.preventDefault();
+      searchRef.current?.focus();
+      searchRef.current?.select();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
     <header className="site-header">
       <div className="header-bar">
@@ -29,14 +48,21 @@ export function Header({
               <path d="m20 20-4-4" />
             </svg>
             <input
+              ref={searchRef}
               id="site-search"
               type="search"
+              aria-keyshortcuts={shortcut.aria}
               placeholder="Search titles, genre: Drama, tag: Indie…"
               autoComplete="off"
               maxLength={200}
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
             />
+            {!query && (
+              <kbd className="search-hint" aria-hidden="true">
+                {shortcut.hint}
+              </kbd>
+            )}
             {query && (
               <button
                 type="button"
@@ -44,7 +70,7 @@ export function Header({
                 aria-label="Clear search"
                 onClick={() => {
                   onQueryChange('');
-                  document.getElementById('site-search')?.focus();
+                  searchRef.current?.focus();
                 }}
               >
                 <span aria-hidden="true">✕</span>
