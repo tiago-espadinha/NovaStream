@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
 import { MediaDetail } from './components/MediaDetail';
+import { LoginModal } from './components/LoginModal';
 import { DetailStatus } from './components/DetailStatus';
 import { mockContent } from './data/mockData';
+import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary } from './types';
@@ -22,6 +24,7 @@ export default function App() {
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [liveResults, setLiveResults] = useState<MediaSummary[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -32,6 +35,8 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
+
+  const { user, status: sessionStatus, logout } = useAuth();
 
   // --- search ---
   useEffect(() => {
@@ -127,6 +132,10 @@ export default function App() {
         onTypeChange={setActiveType}
         query={query}
         onQueryChange={setQuery}
+        user={user}
+        sessionStatus={sessionStatus}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onLogout={logout}
       />
 
       <main>
@@ -220,6 +229,8 @@ export default function App() {
           )}
         </>
       )}
+
+      {authModalOpen && <LoginModal onClose={() => setAuthModalOpen(false)} />}
     </>
   );
 }

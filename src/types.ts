@@ -56,3 +56,17 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   book: "Books",
   game: "Games",
 };
+
+export interface UserPreferences {
+  favoriteGenres: string[];
+  theme?: string;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  name: string;
+  preferences: UserPreferences;
+  savedMedia: MediaSummary[];
+  createdAt: string;
+}
