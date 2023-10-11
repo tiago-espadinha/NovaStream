@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid';
 import { createUser, findUserByEmail, findUserById, updateUser } from '../db/store.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { requireAuth, sessionEnded, signToken } from '../middleware/auth.js';
+import { parseCredentials, parsePreferences } from '../utils/validate.js';
 
 export const authRouter = Router();
 
@@ -12,18 +13,18 @@ function toPublicUser(user) {
 }
 
 authRouter.post('/register', async (req, res) => {
-  const { email, password, name } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  const { value, error } = parseCredentials(req.body, { register: true });
+  if (error) return res.status(400).json({ error });
 
-  if (findUserByEmail(email)) {
+  if (findUserByEmail(value.email)) {
     return res.status(409).json({ error: 'An account with that email already exists' });
   }
 
   const user = {
     id: uuid(),
-    email,
-    name: name || email.split('@')[0],
-    passwordHash: await hashPassword(password),
+    email: value.email,
+    name: value.name,
+    passwordHash: await hashPassword(value.password),
     preferences: { favoriteGenres: [], theme: 'dark' },
     savedMedia: [],
     createdAt: new Date().toISOString(),
@@ -35,11 +36,11 @@ authRouter.post('/register', async (req, res) => {
 });
 
 authRouter.post('/login', async (req, res) => {
-  const { email, password } = req.body || {};
-  if (!email || !password) return res.status(400).json({ error: 'Email and password are required' });
+  const { value, error } = parseCredentials(req.body);
+  if (error) return res.status(400).json({ error });
 
-  const user = findUserByEmail(email);
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
+  const user = findUserByEmail(value.email);
+  if (!user || !(await verifyPassword(value.password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
@@ -56,8 +57,11 @@ authRouter.get('/me', requireAuth, (req, res) => {
 authRouter.patch('/preferences', requireAuth, (req, res) => {
   const user = findUserById(req.userId);
   if (!user) return sessionEnded(res);
+  const { value, error } = parsePreferences(req.body);
+  if (error) return res.status(400).json({ error });
+
   const updated = updateUser(req.userId, {
-    preferences: { ...user.preferences, ...req.body },
+    preferences: { ...user.preferences, ...value },
   });
   res.json({ user: toPublicUser(updated) });
 });
