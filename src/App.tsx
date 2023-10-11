@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header/Header';
 import { ContentGrid } from './components/ContentGrid/ContentGrid';
 import { MediaDetail } from './screens/detail/MediaDetail';
+import { LoginModal } from './screens/account/LoginModal';
 import { DetailStatus } from './screens/detail/DetailStatus';
 import { mockContent } from './data/mockData';
+import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary } from './types';
@@ -27,6 +29,7 @@ export default function App() {
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [liveResults, setLiveResults] = useState<MediaSummary[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -37,6 +40,8 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
+
+  const { user, status: sessionStatus, logout } = useAuth();
 
   // --- search ---
   useEffect(() => {
@@ -128,7 +133,16 @@ export default function App() {
 
   return (
     <>
-      <Header activeType={activeType} onTypeChange={setActiveType} query={query} onQueryChange={setQuery} />
+      <Header
+        activeType={activeType}
+        onTypeChange={setActiveType}
+        query={query}
+        onQueryChange={setQuery}
+        user={user}
+        sessionStatus={sessionStatus}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onLogout={logout}
+      />
 
       <main>
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
@@ -225,6 +239,8 @@ export default function App() {
           )}
         </>
       )}
+
+      {authModalOpen && <LoginModal onClose={() => setAuthModalOpen(false)} />}
     </>
   );
 }
