@@ -4,6 +4,7 @@ import express from 'express';
 import { searchRouter } from './routes/search.js';
 import { mediaRouter } from './routes/media.js';
 import { authRouter } from './routes/auth.js';
+import { savedRouter } from './routes/saved.js';
 import { requireAuthConfig } from './middleware/auth.js';
 
 const app = express();
@@ -16,6 +17,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true }));
 app.use('/api/search', searchRouter);
 app.use('/api/media', mediaRouter);
 app.use('/api/auth', requireAuthConfig, authRouter);
+app.use('/api/saved', requireAuthConfig, savedRouter);
 
 // Centralized error handler as a safety net for anything a route didn't catch itself.
 app.use((err, _req, res, _next) => {
