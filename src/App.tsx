@@ -3,6 +3,7 @@ import { Header } from './components/Header/Header';
 import { ContentGrid } from './components/ContentGrid/ContentGrid';
 import { MediaDetail } from './screens/detail/MediaDetail';
 import { LoginModal } from './screens/account/LoginModal';
+import { AccountNotices, type AccountNotice } from './components/AccountNotices/AccountNotices';
 import { DetailStatus } from './screens/detail/DetailStatus';
 import { mockContent } from './data/mockData';
 import { useAuth } from './context/AuthContext';
@@ -13,7 +14,6 @@ import Spinner from './components/Spinner/Spinner';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 import './screens/home/HomeScreen.css';
 import './screens/home/ResultsSection.css';
-import './components/AccountNotices/AccountNotices.css';
 import './components/SiteFooter/SiteFooter.css';
 import './screens/detail/SeriesEpisodes.css';
 
@@ -41,7 +41,7 @@ export default function App() {
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
 
-  const { user, status: sessionStatus, logout } = useAuth();
+  const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
 
   // --- search ---
   useEffect(() => {
@@ -131,6 +131,23 @@ export default function App() {
   const selectedTitle = liveResults.find((item) => item.id === selectedId)?.title;
   const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
 
+  const accountNotices: AccountNotice[] = [];
+  if (sessionNotice) {
+    accountNotices.push({
+      id: 'session',
+      message: sessionNotice,
+      tone: 'warning',
+      action: {
+        label: 'Sign in',
+        onClick: () => {
+          clearSessionNotice();
+          setAuthModalOpen(true);
+        },
+      },
+      onDismiss: clearSessionNotice,
+    });
+  }
+
   return (
     <>
       <Header
@@ -145,6 +162,7 @@ export default function App() {
       />
 
       <main>
+        <AccountNotices notices={accountNotices} />
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
         {awaitingLiveQuery && (
           <section className="intro" aria-labelledby="intro-title">
