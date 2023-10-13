@@ -1,5 +1,5 @@
 import { API_BASE_URL } from '../config';
-import type { ContentItem, ContentType, MediaSummary, MusicKind } from '../types';
+import type { AuthUser, ContentItem, ContentType, MediaSummary, MusicKind, UserPreferences } from '../types';
 
 export type ProviderErrorCode = 'not_configured' | 'not_found' | 'timeout' | 'unavailable';
 
@@ -53,4 +53,37 @@ export function searchMedia(
 
 export function getMediaDetail(type: ContentType, externalId: string) {
   return request<ContentItem>(`/media/${type}/${externalId}`);
+}
+
+// ---- auth ----
+
+export interface AuthResponse {
+  token: string;
+  user: AuthUser;
+}
+
+export function register(email: string, password: string, name?: string) {
+  return request<AuthResponse>('/auth/register', {
+    method: 'POST',
+    body: JSON.stringify({ email, password, name }),
+  });
+}
+
+export function login(email: string, password: string) {
+  return request<AuthResponse>('/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function fetchCurrentUser(token: string) {
+  return request<{ user: AuthUser }>('/auth/me', {}, token);
+}
+
+export function updatePreferences(token: string, patch: Partial<UserPreferences>) {
+  return request<{ user: AuthUser }>(
+    '/auth/preferences',
+    { method: 'PATCH', body: JSON.stringify(patch) },
+    token,
+  );
 }

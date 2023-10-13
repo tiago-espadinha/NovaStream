@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
 import { MediaDetail } from './components/MediaDetail';
+import { LoginModal } from './components/LoginModal';
+import { AccountNotices, type AccountNotice } from './components/AccountNotices';
 import { DetailStatus } from './components/DetailStatus';
 import { mockContent } from './data/mockData';
+import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary } from './types';
@@ -22,6 +25,7 @@ export default function App() {
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
 
   const [liveResults, setLiveResults] = useState<MediaSummary[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -32,6 +36,8 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
+
+  const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
 
   // --- search ---
   useEffect(() => {
@@ -120,6 +126,23 @@ export default function App() {
   const selectedTitle = liveResults.find((item) => item.id === selectedId)?.title;
   const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
 
+  const accountNotices: AccountNotice[] = [];
+  if (sessionNotice) {
+    accountNotices.push({
+      id: 'session',
+      message: sessionNotice,
+      tone: 'warning',
+      action: {
+        label: 'Sign in',
+        onClick: () => {
+          clearSessionNotice();
+          setAuthModalOpen(true);
+        },
+      },
+      onDismiss: clearSessionNotice,
+    });
+  }
+
   return (
     <>
       <Header
@@ -127,9 +150,14 @@ export default function App() {
         onTypeChange={setActiveType}
         query={query}
         onQueryChange={setQuery}
+        user={user}
+        sessionStatus={sessionStatus}
+        onOpenAuth={() => setAuthModalOpen(true)}
+        onLogout={logout}
       />
 
       <main>
+        <AccountNotices notices={accountNotices} />
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
         {awaitingLiveQuery && (
           <section className="intro" aria-labelledby="intro-title">
@@ -220,6 +248,8 @@ export default function App() {
           )}
         </>
       )}
+
+      {authModalOpen && <LoginModal onClose={() => setAuthModalOpen(false)} />}
     </>
   );
 }
