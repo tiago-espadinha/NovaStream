@@ -170,6 +170,22 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
+  .field-error {
+    color: var(--color-danger);
+    font-size: var(--font-size-small);
+    font-weight: 500;
+  }
+  .field-error::before {
+    content: '⚠ ' / '';
+  }
+  .optional,
+  .field-hint {
+    color: var(--color-text-muted);
+    font-weight: 400;
+  }
+  .field-hint {
+    font-size: var(--font-size-label);
+  }
   .svg {
     height: 18px;
     width: 18px;

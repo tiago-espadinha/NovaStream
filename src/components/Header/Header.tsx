@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
+import type { SessionStatus } from '../../context/AuthContext';
 import { isDialogOpen } from '../../hooks/useDialog';
-import type { ContentType } from '../../types';
+import type { AuthUser, ContentType } from '../../types';
 import { isMacPlatform, isSearchShortcut, searchShortcutLabels } from '../../utils/searchShortcut';
 import { TypeNav } from '../TypeNav/TypeNav';
 import './Header.css';
@@ -13,9 +14,22 @@ interface HeaderProps {
   onTypeChange: (type: ContentType | 'all') => void;
   query: string;
   onQueryChange: (q: string) => void;
+  user: AuthUser | null;
+  sessionStatus: SessionStatus;
+  onOpenAuth: () => void;
+  onLogout: () => void;
 }
 
-export function Header({ activeType, onTypeChange, query, onQueryChange }: HeaderProps) {
+export function Header({
+  activeType,
+  onTypeChange,
+  query,
+  onQueryChange,
+  user,
+  sessionStatus,
+  onOpenAuth,
+  onLogout,
+}: HeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -73,6 +87,22 @@ export function Header({ activeType, onTypeChange, query, onQueryChange }: Heade
             </button>
           )}
         </form>
+        <div className="header-actions">
+          {sessionStatus === 'checking' ? (
+            <button type="button" className="account-button" disabled aria-busy="true">
+              Signing in…
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="account-button"
+              onClick={sessionStatus === 'signedOut' ? onOpenAuth : onLogout}
+              title={user ? `Sign out (${user.name})` : undefined}
+            >
+              {sessionStatus === 'signedOut' ? 'Sign in' : user ? `Sign out (${user.name})` : 'Sign out'}
+            </button>
+          )}
+        </div>
       </div>
       <div className="header-types">
         <TypeNav active={activeType} onChange={onTypeChange} />
