@@ -87,3 +87,21 @@ export function updatePreferences(token: string, patch: Partial<UserPreferences>
     token,
   );
 }
+
+// ---- saved media ----
+
+export function getSavedMedia(token: string) {
+  return request<{ savedMedia: MediaSummary[] }>('/saved', {}, token);
+}
+
+export function saveMedia(token: string, media: MediaSummary) {
+  return request<{ savedMedia: MediaSummary[] }>(
+    '/saved',
+    { method: 'POST', body: JSON.stringify(media) },
+    token,
+  );
+}
+
+export function removeSavedMedia(token: string, id: string) {
+  return request<{ savedMedia: MediaSummary[] }>(`/saved/${id}`, { method: 'DELETE' }, token);
+}
