@@ -4,16 +4,19 @@ import type { ContentItem } from '../../types';
 import { mediaTypeLabel } from '../../utils/discovery';
 import { fallbackArtwork } from '../../utils/gradient';
 import { ScoreBadge } from '../../components/ScoreBadge/ScoreBadge';
+import HeartIcon from '../../components/HeartIcon/HeartIcon';
 import { ArtworkViewer } from './ArtworkViewer';
 import './MediaDetail.css';
 
 interface MediaDetailProps {
   item: ContentItem;
+  favorite: boolean;
+  onToggleFavorite: (item: ContentItem) => void;
   onSearchTerm: (query: string) => void;
   onClose: () => void;
 }
 
-export function MediaDetail({ item, onSearchTerm, onClose }: MediaDetailProps) {
+export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, onClose }: MediaDetailProps) {
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [viewingArtwork, setViewingArtwork] = useState(false);
   const streamingPlatforms = item.platforms
@@ -64,6 +67,24 @@ export function MediaDetail({ item, onSearchTerm, onClose }: MediaDetailProps) {
               {item.releaseYear != null && <span>{item.releaseYear}</span>}
               {item.runtime && <span>{item.runtime}</span>}
             </p>
+            <div className="detail-actions">
+              <button
+                type="button"
+                className={`btn ${favorite ? 'btn-ghost saved' : 'btn-primary'} detail-save`}
+                aria-pressed={favorite}
+                onClick={() => onToggleFavorite(item)}
+              >
+                <span aria-hidden="true">
+                  <HeartIcon
+                    favorite={favorite}
+                    size="18px"
+                    primaryColor="var(--color-primary)"
+                    secondaryColor="var(--color-on-primary)"
+                  />
+                </span>
+                {favorite ? 'Saved to favorites' : 'Save to favorites'}
+              </button>
+            </div>
           </div>
         </div>
 
