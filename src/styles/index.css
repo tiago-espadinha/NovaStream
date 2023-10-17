@@ -318,6 +318,9 @@ main {
   border-color: var(--color-text);
   background: var(--color-surface-glass);
 }
+.btn-ghost.saved {
+  border-color: var(--color-primary);
+}
 .icon-button {
   display: grid;
   place-items: center;
@@ -629,6 +632,26 @@ main {
   gap: var(--space-1);
   color: var(--color-text);
   font-weight: 600;
+}
+.card-save {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 50%;
+  background: var(--color-scrim);
+  cursor: pointer;
+}
+.card-save:hover {
+  border-color: var(--color-text);
+}
+.card-save.saved {
+  border-color: var(--color-primary);
 }
 .site-footer {
   padding: var(--space-6) var(--layout-gutter) calc(var(--space-6) + env(safe-area-inset-bottom, 0px) + var(--notice-space, 0px));
