@@ -1,15 +1,18 @@
 import type { MediaSummary } from '../../types';
 import { mediaTypeLabel } from '../../utils/discovery';
 import { fallbackArtwork } from '../../utils/gradient';
+import HeartIcon from '../HeartIcon/HeartIcon';
 import { ScoreBadge } from '../ScoreBadge/ScoreBadge';
 import './ContentCard.css';
 
 interface ContentCardProps {
   item: MediaSummary;
+  favorite: boolean;
+  onToggleFavorite: (item: MediaSummary) => void;
   onSelect: (id: string) => void;
 }
 
-export function ContentCard({ item, onSelect }: ContentCardProps) {
+export function ContentCard({ item, favorite, onToggleFavorite, onSelect }: ContentCardProps) {
   return (
     <article className="card">
       <div className="card-art">
@@ -34,6 +37,20 @@ export function ContentCard({ item, onSelect }: ContentCardProps) {
           {item.releaseYear != null && <span>{item.releaseYear}</span>}
         </div>
       </div>
+      <button
+        type="button"
+        className={`card-save${favorite ? ' saved' : ''}`}
+        aria-label={`Save ${item.title}`}
+        aria-pressed={favorite}
+        onClick={() => onToggleFavorite(item)}
+      >
+        <HeartIcon
+          favorite={favorite}
+          size="18px"
+          primaryColor="var(--color-primary)"
+          secondaryColor="var(--color-text)"
+        />
+      </button>
     </article>
   );
 }

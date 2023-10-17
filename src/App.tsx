@@ -6,6 +6,7 @@ import { LoginModal } from './screens/account/LoginModal';
 import { AccountNotices, type AccountNotice } from './components/AccountNotices/AccountNotices';
 import { DetailStatus } from './screens/detail/DetailStatus';
 import { mockContent } from './data/mockData';
+import { useFavorites } from './hooks/useFavorites';
 import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
@@ -42,6 +43,8 @@ export default function App() {
   const [detailAttempt, setDetailAttempt] = useState(0);
 
   const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
+  const favorites = useFavorites();
+  const { isFavorite, toggleFavorite, savedMedia } = favorites;
 
   // --- search ---
   useEffect(() => {
@@ -128,7 +131,7 @@ export default function App() {
   // results so that filters hiding everything still show the filter empty state.
   const searchFailed = Boolean(liveError) && liveResults.length === 0;
   // Known from the card that opened the detail, so a failed lookup can still name the title.
-  const selectedTitle = liveResults.find((item) => item.id === selectedId)?.title;
+  const selectedTitle = [...liveResults, ...savedMedia].find((item) => item.id === selectedId)?.title;
   const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
 
   const accountNotices: AccountNotice[] = [];
@@ -145,6 +148,23 @@ export default function App() {
         },
       },
       onDismiss: clearSessionNotice,
+    });
+  }
+  if (favorites.notice) {
+    accountNotices.push({
+      id: 'favorites',
+      message: favorites.notice.message,
+      tone: favorites.notice.error ? 'error' : 'success',
+      action: favorites.notice.offerSignIn
+        ? {
+            label: 'Sign in',
+            onClick: () => {
+              favorites.dismissNotice();
+              setAuthModalOpen(true);
+            },
+          }
+        : undefined,
+      onDismiss: favorites.dismissNotice,
     });
   }
 
@@ -226,7 +246,12 @@ export default function App() {
               </div>
             </div>
           ) : (
-            <ContentGrid items={displayedItems} onSelect={setSelectedId} />
+            <ContentGrid
+              items={displayedItems}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onSelect={setSelectedId}
+            />
           )}
         </section>
       </main>
@@ -248,6 +273,8 @@ export default function App() {
           {detail && (
             <MediaDetail
               item={detail}
+              favorite={isFavorite(detail.id)}
+              onToggleFavorite={toggleFavorite}
               onSearchTerm={(searchQuery) => {
                 setQuery(searchQuery);
                 setSelectedId(null);
