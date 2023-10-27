@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyContentFilters } from './contentFilters';
+import { applyContentFilters, DEFAULT_PLAYS_RANGE, playsSliderRange } from './contentFilters';
 import type { MediaSummary } from '../types';
 
 const items: MediaSummary[] = [
@@ -195,5 +195,31 @@ describe('applyContentFilters close matching', () => {
       providerMatched: true,
     });
     expect(result.map((item) => item.id)).toEqual(['close', 'alt']);
+  });
+});
+
+describe('playsSliderRange', () => {
+  const song = (id: string, playcount: string) =>
+    ({ id, title: id, type: 'music', rating: null, genres: [], playStats: { listeners: '0', playcount } }) as MediaSummary;
+
+  it('tops out at the highest music play count, rounded down to a readable step', () => {
+    expect(playsSliderRange(items)).toEqual({ max: 20000, step: 200 });
+    expect(playsSliderRange([song('a', '1234567'), song('b', '900')])).toEqual({ max: 1220000, step: 20000 });
+  });
+
+  it('ignores the ratings of other types', () => {
+    expect(playsSliderRange([...items, { id: 'x', title: 'X', type: 'movie', rating: 9_999_999, genres: [] }])).toEqual({
+      max: 20000,
+      step: 200,
+    });
+  });
+
+  it('keeps whole-number steps for tiny play counts', () => {
+    expect(playsSliderRange([song('a', '37')])).toEqual({ max: 37, step: 1 });
+  });
+
+  it('falls back to the default range without music play counts', () => {
+    expect(playsSliderRange([])).toEqual(DEFAULT_PLAYS_RANGE);
+    expect(playsSliderRange(items.filter((item) => item.type !== 'music'))).toEqual(DEFAULT_PLAYS_RANGE);
   });
 });

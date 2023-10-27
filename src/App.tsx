@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
 import { MediaDetail } from './components/MediaDetail';
@@ -10,12 +10,17 @@ import { useFavorites } from './hooks/useFavorites';
 import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
-import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary } from './types';
+import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary, type MusicKind } from './types';
 import Spinner from './components/Spinner';
+import { FilterDialog } from './components/FilterDialog';
+import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 import {
   applyContentFilters,
+  COMMON_GENRES_BY_TYPE,
   parseContentQuery,
+  playsSliderRange,
+  type GenreSelection,
   type SortOption,
 } from './utils/contentFilters';
 
@@ -29,15 +34,23 @@ function headingFor(query: string, awaitingLiveQuery: boolean, activeType: Conte
 
 export default function App() {
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
+  const [musicKind, setMusicKind] = useState<MusicKind | 'all'>('all');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<ContentType[]>(ALL_TYPES);
+  const [selectedGenres, setSelectedGenres] = useState<GenreSelection[]>([]);
+  const [minRating, setMinRating] = useState(0);
+  const [minPlays, setMinPlays] = useState(0);
   const [sortBy, setSortBy] = useState<SortOption>('featured');
 
   const [liveResults, setLiveResults] = useState<MediaSummary[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState<LiveProblem | null>(null);
   const [searchAttempt, setSearchAttempt] = useState(0);
+  // The last "All" search, so switching tabs on the same query filters it instead of refetching.
+  const allSearch = useRef<AllSearch | null>(null);
 
   const [detail, setDetail] = useState<ContentItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -59,16 +72,27 @@ export default function App() {
       setLiveLoading(false);
       return;
     }
+    const searchedTypes = activeType === 'all' ? ALL_TYPES.length : 1;
+    // Only All and Music search by music kind; other tabs always ask for every kind.
+    const kind = activeType === 'all' || activeType === 'music' ? musicKind : 'all';
+    const reused = reuseAllResults(allSearch.current, q, activeType, kind, searchAttempt);
+    if (reused) {
+      setLiveResults(reused.results);
+      setLiveError(describeSearchErrors(reused.errors, reused.results.length, searchedTypes));
+      setLiveLoading(false);
+      return;
+    }
     const controller = new AbortController();
     setLiveLoading(true);
     setLiveError(null);
     const timer = setTimeout(() => {
       api
-        .searchMedia(q, activeType)
+        .searchMedia(q, activeType, kind)
         .then((res) => {
           if (controller.signal.aborted) return;
+          if (activeType === 'all') allSearch.current = { query: q, musicKind: kind, attempt: searchAttempt, ...res };
           setLiveResults(res.results);
-          setLiveError(describeSearchErrors(res.errors, res.results.length, activeType === 'all' ? ALL_TYPES.length : 1));
+          setLiveError(describeSearchErrors(res.errors, res.results.length, searchedTypes));
         })
         .catch((err) => {
           if (!controller.signal.aborted) {
@@ -85,22 +109,46 @@ export default function App() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, activeType, searchAttempt]);
+  }, [query, activeType, musicKind, searchAttempt]);
 
+  const activeCategories = useMemo(
+    () => (activeType === 'all' ? selectedCategories : [activeType]),
+    [activeType, selectedCategories],
+  );
   const filterItems = USE_MOCK ? mockContent : liveResults;
+
+  // From the unfiltered results, so raising the minimum never shrinks the slider under it.
+  const playsRange = useMemo(() => playsSliderRange(filterItems), [filterItems]);
+
+  // Kept on the slider's steps and within its range, so the thumb shows the value that filters.
+  useEffect(() => {
+    const { max, step } = playsRange;
+    setMinPlays((current) => Math.min(Math.round(current / step) * step, max));
+  }, [playsRange]);
+
+  const genreGroups = useMemo(() => {
+    const types = activeType === 'all' ? selectedCategories : [activeType];
+    return types.map((type) => ({ type, genres: COMMON_GENRES_BY_TYPE[type] }));
+  }, [activeType, selectedCategories]);
 
   const displayedItems = useMemo(() => {
     return applyContentFilters(filterItems, {
       activeType,
-      selectedCategories: ALL_TYPES,
-      selectedGenres: [],
+      selectedCategories: activeCategories,
+      selectedGenres,
       query,
-      minRating: 0,
-      minPlays: 0,
+      minRating,
+      minPlays,
       sortBy,
       providerMatched: !USE_MOCK,
     });
-  }, [filterItems, activeType, query, sortBy]);
+  }, [filterItems, activeType, activeCategories, selectedGenres, query, minRating, minPlays, sortBy]);
+
+  useEffect(() => {
+    if (activeType !== 'all') {
+      setSelectedGenres((current) => current.filter(({ type }) => type === activeType));
+    }
+  }, [activeType]);
 
   // --- detail screen ---
   useEffect(() => {
@@ -131,11 +179,44 @@ export default function App() {
     };
   }, [selectedId, detailAttempt]);
 
+  const toggleCategory = (type: ContentType) => {
+    const isSelected = selectedCategories.includes(type);
+    setSelectedCategories((current) =>
+      isSelected ? current.filter((item) => item !== type) : [...current, type],
+    );
+    if (isSelected) {
+      setSelectedGenres((current) => current.filter((genre) => genre.type !== type));
+    }
+  };
+
+  const toggleGenre = (type: ContentType, genre: string) => {
+    setSelectedGenres((current) => {
+      const exists = current.some((item) => item.type === type && item.genre === genre);
+      return exists
+        ? current.filter((item) => item.type !== type || item.genre !== genre)
+        : [...current, { type, genre }];
+    });
+  };
+
+  const resetFilters = () => {
+    setSelectedCategories(ALL_TYPES);
+    setSelectedGenres([]);
+    setMinRating(0);
+    setMinPlays(0);
+    setMusicKind('all');
+  };
+
   const trimmedQuery = query.trim();
   const awaitingLiveQuery = !USE_MOCK && !trimmedQuery;
   // A failed live search with nothing returned is an error, not "no matches". Uses the raw
   // results so that filters hiding everything still show the filter empty state.
   const searchFailed = Boolean(liveError) && liveResults.length === 0;
+  const activeFilterCount =
+    selectedGenres.length +
+    (activeType === 'all' && selectedCategories.length < ALL_TYPES.length ? 1 : 0) +
+    (minRating > 0 ? 1 : 0) +
+    (minPlays > 0 ? 1 : 0) +
+    (activeCategories.includes('music') && musicKind !== 'all' ? 1 : 0);
   // Known from the card that opened the detail, so a failed lookup can still name the title.
   const selectedTitle = [...liveResults, ...savedMedia].find((item) => item.id === selectedId)?.title;
   const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
@@ -221,6 +302,14 @@ export default function App() {
                     <option value="title">A–Z</option>
                   </select>
                 </label>
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  aria-haspopup="dialog"
+                  onClick={() => setShowFilters(true)}
+                >
+                  Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+                </button>
               </div>
             )}
           </div>
@@ -260,6 +349,11 @@ export default function App() {
                     Clear search
                   </button>
                 )}
+                {activeFilterCount > 0 && (
+                  <button type="button" className="btn btn-ghost" onClick={resetFilters}>
+                    Reset filters
+                  </button>
+                )}
               </div>
             </div>
           ) : (
@@ -271,6 +365,29 @@ export default function App() {
             />
           )}
         </section>
+
+        {showFilters && (
+          <FilterDialog
+            showCategories={activeType === 'all'}
+            selectedCategories={selectedCategories}
+            onToggleCategory={toggleCategory}
+            genreGroups={genreGroups}
+            selectedGenres={selectedGenres}
+            onToggleGenre={toggleGenre}
+            showMusicKind={activeCategories.includes('music')}
+            musicKind={musicKind}
+            onMusicKindChange={setMusicKind}
+            showRating={activeCategories.some((type) => type !== 'music')}
+            minRating={minRating}
+            onMinRatingChange={setMinRating}
+            showPlays={activeCategories.includes('music')}
+            minPlays={minPlays}
+            playsRange={playsRange}
+            onMinPlaysChange={setMinPlays}
+            onReset={resetFilters}
+            onClose={() => setShowFilters(false)}
+          />
+        )}
       </main>
 
       <footer className="site-footer">Nova Stream — a React + TypeScript frontend with a real API-backed server.</footer>

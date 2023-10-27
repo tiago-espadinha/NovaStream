@@ -58,6 +58,23 @@ function getMusicPlayCount(item: MediaSummary): number {
   return parseNumericValue(item.rating);
 }
 
+/** Used before any music result exists to size the range from. */
+export const DEFAULT_PLAYS_RANGE = { max: 500_000, step: 5_000 };
+
+/**
+ * The Minimum plays slider's range: up to the top play count among the music results, rounded
+ * down to a 1/2/5 step of roughly a hundredth of it so the slider moves in readable amounts and
+ * its far end still keeps the top result.
+ */
+export function playsSliderRange(items: MediaSummary[]): { max: number; step: number } {
+  const top = Math.max(0, ...items.filter((item) => item.type === 'music').map(getMusicPlayCount));
+  if (top <= 0) return DEFAULT_PLAYS_RANGE;
+  const rough = top / 100;
+  const magnitude = 10 ** Math.floor(Math.log10(rough));
+  const step = Math.max(1, [1, 2, 5, 10].map((m) => m * magnitude).find((size) => size >= rough)!);
+  return { max: Math.floor(top / step) * step, step };
+}
+
 function getComparableScore(item: MediaSummary): number {
   if (item.type === 'music') {
     return getMusicPlayCount(item);
