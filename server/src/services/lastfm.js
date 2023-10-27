@@ -333,6 +333,85 @@ export async function searchMusic(query, kind = "all") {
   return groups.flat();
 }
 
+export async function searchMusicByTag(tag, kind = "album") {
+  const normalizeTag = (value) =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  let matchingTags = [];
+
+  try {
+    const data = await lastfmFetch({
+      method: "tag.search",
+      tag,
+      limit: CANDIDATE_POOL,
+    });
+    const target = normalizeTag(tag);
+    matchingTags = toArray(data.results?.tagmatches?.tag || [])
+      .map((match) => match.name)
+      .filter((name) => normalizeTag(name).includes(target))
+      .slice(0, CANDIDATE_POOL);
+  } catch {
+    // Fall back to the provider's direct tag lookup if tag.search is unavailable.
+  }
+
+  if (!matchingTags.length) matchingTags = [tag];
+  const kinds = kind === "all" ? ["artist", "album", "song"] : [kind];
+  const groups = await Promise.all(kinds.map(async (resultKind) => {
+    const matches = await Promise.all(
+      matchingTags.map(async (matchedTag) => {
+        try {
+          const method = {
+            artist: "tag.gettopartists",
+            album: "tag.gettopalbums",
+            song: "tag.gettoptracks",
+          }[resultKind];
+          const data = await lastfmFetch({
+            method,
+            tag: matchedTag,
+            limit: Math.ceil(CANDIDATE_POOL / matchingTags.length),
+          });
+          if (resultKind === "album") {
+            return extractAlbumMatches(data, "tag").map((album) => ({
+              ...album,
+              matchedTag,
+            }));
+          }
+          const path = resultKind === "artist" ? "topartists.artist" : "toptracks.track";
+          return toArray(extractMatches(data, path)).map((match) => ({
+            ...match,
+            matchedTag,
+          }));
+        } catch {
+          return [];
+        }
+      }),
+    );
+    const flattened = matches.flat();
+    if (resultKind === "album") return resolveAlbumMatches(flattened, tag);
+    return flattened.slice(0, RESULT_LIMIT).map((match) => {
+      const isArtist = resultKind === "artist";
+      const artist = isArtist ? match.name : artistName(match.artist);
+      const title = match.name || match.title;
+      const matchedTag = [tag];
+      return {
+        id: musicId(resultKind, artist, title),
+        title,
+        type: "music",
+        musicKind: resultKind,
+        rating: Number(match.playcount) || 0,
+        tags: matchedTag,
+        genres: matchedTag,
+        releaseYear: null,
+        posterUrl: bestImage(match.image),
+        ...(!isArtist ? { artist } : {}),
+      };
+    });
+  }));
+  return groups.flat();
+}
+
 export async function getMusicDetail(compositeId) {
   const parts = compositeId.split("|||");
   const isLegacyAlbumId = parts.length === 2 && parts[0] !== "artist";

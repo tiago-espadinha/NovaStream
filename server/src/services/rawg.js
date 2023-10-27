@@ -35,11 +35,51 @@ function summarize(raw) {
   };
 }
 
+function normalizeLabel(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+async function findTaxonomyIds(path, label) {
+  const data = await rawgFetch(path, { search: label, page_size: 40 });
+  const target = normalizeLabel(label);
+  return (data.results || [])
+    .filter((entry) =>
+      normalizeLabel(entry.name || "").includes(target) || normalizeLabel(entry.slug || "").includes(target),
+    )
+    .map((entry) => entry.id)
+    .filter(Boolean);
+}
+
+async function searchGamesByTaxonomy(label, field, path) {
+  const taxonomyIds = await findTaxonomyIds(path, label);
+  if (!taxonomyIds.length) return [];
+
+  const data = await rawgFetch("/games", {
+    [field]: taxonomyIds.join(","),
+    page_size: 40,
+    ordering: "-rating",
+  });
+  return (data.results || [])
+    .map(summarize)
+    .filter((game) => game.rating != null && game.rating !== 0);
+}
+
 export async function searchGames(query) {
   const data = await rawgFetch("/games", { search: query, page_size: 20 });
   return (data.results || [])
     .map(summarize)
     .filter((game) => game.rating != null && game.rating !== 0);
+}
+
+export function searchGamesByGenre(genre) {
+  return searchGamesByTaxonomy(genre, "genres", "/genres");
+}
+
+export function searchGamesByTag(tag) {
+  return searchGamesByTaxonomy(tag, "tags", "/tags").then(async (results) => {
+    if (results.length) return results;
+    return searchGamesByTaxonomy(tag, "genres", "/genres");
+  });
 }
 
 export async function getGameDetail(id) {

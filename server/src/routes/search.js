@@ -1,8 +1,15 @@
 import { Router } from 'express';
-import { searchMovies, searchTv } from '../services/tmdb.js';
-import { searchBooks } from '../services/openLibrary.js';
-import { searchGames } from '../services/rawg.js';
-import { searchMusic } from '../services/lastfm.js';
+import {
+  searchMovies,
+  searchMoviesByGenre,
+  searchMoviesByTag,
+  searchTv,
+  searchTvByGenre,
+  searchTvByTag,
+} from '../services/tmdb.js';
+import { searchBooks, searchBooksBySubject } from '../services/openLibrary.js';
+import { searchGames, searchGamesByGenre, searchGamesByTag } from '../services/rawg.js';
+import { searchMusic, searchMusicByTag } from '../services/lastfm.js';
 import { searchAcross } from '../services/searchAcross.js';
 
 export const searchRouter = Router();
@@ -15,6 +22,23 @@ const SEARCHERS = {
   book: searchBooks,
   game: searchGames,
   music: searchMusic,
+};
+
+const METADATA_SEARCHERS = {
+  genre: {
+    movie: searchMoviesByGenre,
+    tv: searchTvByGenre,
+    book: searchBooksBySubject,
+    game: searchGamesByGenre,
+    music: searchMusicByTag,
+  },
+  tag: {
+    movie: searchMoviesByTag,
+    tv: searchTvByTag,
+    book: searchBooksBySubject,
+    game: searchGamesByTag,
+    music: searchMusicByTag,
+  },
 };
 
 // GET /api/search?q=dune&type=all|movie|tv|book|game
@@ -30,13 +54,19 @@ searchRouter.get('/', async (req, res) => {
     return res.status(400).json({ error: `Unknown music kind "${musicKind}"` });
   }
 
+  const selector = q.match(/^(genre|tag):\s*(.+)$/i);
+  const searchTerm = selector ? selector[2].trim() : q;
+  const searchers = selector
+    ? METADATA_SEARCHERS[selector[1].toLowerCase()]
+    : SEARCHERS;
+
   const typesToSearch = type === 'all' ? Object.keys(SEARCHERS) : [type];
   if (!typesToSearch.every((t) => Object.hasOwn(SEARCHERS, t))) {
     return res.status(400).json({ error: `Unknown type "${type}"` });
   }
 
   const { results, errors } = await searchAcross(typesToSearch, (t) =>
-    SEARCHERS[t](q, t === 'music' ? musicKind : undefined),
+    searchers[t](searchTerm, t === 'music' ? musicKind : undefined),
   );
 
   res.json({ results, errors });

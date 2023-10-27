@@ -37,6 +37,14 @@ export async function searchBooks(query) {
     .map(summarize);
 }
 
+export async function searchBooksBySubject(subject) {
+  const results = await searchBooks(`subject:${subject}`);
+  const normalizedSubject = subject.toLowerCase();
+  return results.filter((book) =>
+    book.genres.some((genre) => genre.toLowerCase().includes(normalizedSubject)),
+  );
+}
+
 async function fetchJson(path) {
   const res = await fetch(`${BASE}${path}`);
   // Ratings/author lookups 404 fairly often on Open Library (e.g. unrated works) —
