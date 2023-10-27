@@ -13,6 +13,11 @@ import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary } from './types';
 import Spinner from './components/Spinner';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
+import {
+  applyContentFilters,
+  parseContentQuery,
+  type SortOption,
+} from './utils/contentFilters';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 
@@ -27,6 +32,7 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('featured');
 
   const [liveResults, setLiveResults] = useState<MediaSummary[]>([]);
   const [liveLoading, setLiveLoading] = useState(false);
@@ -45,8 +51,9 @@ export default function App() {
   // --- search ---
   useEffect(() => {
     if (USE_MOCK) return;
+    const parsedQuery = parseContentQuery(query);
     const q = query.trim();
-    if (!q) {
+    if (!q || (parsedQuery.kind !== 'text' && !parsedQuery.value)) {
       setLiveResults([]);
       setLiveError(null);
       setLiveLoading(false);
@@ -83,13 +90,17 @@ export default function App() {
   const filterItems = USE_MOCK ? mockContent : liveResults;
 
   const displayedItems = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return filterItems.filter(
-      (item) =>
-        (activeType === 'all' || item.type === activeType) &&
-        (!USE_MOCK || !q || item.title.toLowerCase().includes(q)),
-    );
-  }, [filterItems, activeType, query]);
+    return applyContentFilters(filterItems, {
+      activeType,
+      selectedCategories: ALL_TYPES,
+      selectedGenres: [],
+      query,
+      minRating: 0,
+      minPlays: 0,
+      sortBy,
+      providerMatched: !USE_MOCK,
+    });
+  }, [filterItems, activeType, query, sortBy]);
 
   // --- detail screen ---
   useEffect(() => {
@@ -199,6 +210,19 @@ export default function App() {
                   `${displayedItems.length} ${displayedItems.length === 1 ? 'title' : 'titles'}`}
               </p>
             </div>
+            {!awaitingLiveQuery && !searchFailed && (
+              <div className="results-toolbar">
+                <label className="sort-field">
+                  <span>Sort</span>
+                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
+                    <option value="featured">{trimmedQuery ? 'Best match' : 'Featured'}</option>
+                    <option value="rating">Top rated</option>
+                    <option value="newest">Newest</option>
+                    <option value="title">A–Z</option>
+                  </select>
+                </label>
+              </div>
+            )}
           </div>
 
           {liveError && (
