@@ -1,0 +1,49 @@
+@layer screens {
+  .filter-body {
+    display: grid;
+    gap: var(--space-6);
+    padding: var(--space-5) var(--space-6);
+    overflow-y: auto;
+  }
+  .filter-block {
+    display: grid;
+    gap: var(--space-3);
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .filter-label,
+  .genre-group-name {
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-label);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .genre-group {
+    display: grid;
+    gap: var(--space-2);
+  }
+  .genre-group-name {
+    color: var(--color-text);
+  }
+  .range-field {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+  }
+  .range-field input {
+    flex: 1 1 180px;
+    max-width: 320px;
+    accent-color: var(--color-secondary);
+  }
+  .range-field output {
+    min-width: 7ch;
+    color: var(--color-text);
+    font-weight: 700;
+  }
+}
