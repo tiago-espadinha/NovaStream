@@ -115,6 +115,16 @@
     outline-offset: 0;
     border-color: var(--color-focus);
   }
+  .search:has(.search-keyword) input {
+    padding-right: 112px;
+  }
+  .search-keyword {
+    position: absolute;
+    right: 44px;
+    top: 50%;
+    translate: 0 -50%;
+    pointer-events: none;
+  }
   .header-actions {
     grid-area: actions;
     display: flex;

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Header } from './components/Header/Header';
 import { ContentGrid } from './components/ContentGrid/ContentGrid';
 import { MediaDetail } from './screens/detail/MediaDetail';
@@ -13,6 +13,7 @@ import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary, type MusicKind } from './types';
 import Spinner from './components/Spinner/Spinner';
 import { FilterDialog } from './screens/home/FilterDialog';
+import { KeywordChip } from './components/KeywordChip/KeywordChip';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 import {
@@ -30,7 +31,15 @@ import './screens/detail/SeriesEpisodes.css';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 
-function headingFor(query: string, awaitingLiveQuery: boolean, activeType: ContentType | 'all'): string {
+function headingFor(query: string, awaitingLiveQuery: boolean, activeType: ContentType | 'all'): ReactNode {
+  const parsed = parseContentQuery(query);
+  if (parsed.kind !== 'text' && parsed.value) {
+    return (
+      <>
+        Results for <KeywordChip kind={parsed.kind} value={parsed.value} />
+      </>
+    );
+  }
   if (query) return `Results for “${query}”`;
   if (awaitingLiveQuery) return 'Search to get started';
   return activeType === 'all' ? 'Browse tonight' : CONTENT_TYPE_LABELS[activeType];
