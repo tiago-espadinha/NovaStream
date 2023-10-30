@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyContentFilters, DEFAULT_PLAYS_RANGE, playsSliderRange } from './contentFilters';
+import { applyContentFilters, DEFAULT_PLAYS_RANGE, parseContentQuery, playsSliderRange } from './contentFilters';
 import type { MediaSummary } from '../types';
 
 const items: MediaSummary[] = [
@@ -221,5 +221,22 @@ describe('playsSliderRange', () => {
   it('falls back to the default range without music play counts', () => {
     expect(playsSliderRange([])).toEqual(DEFAULT_PLAYS_RANGE);
     expect(playsSliderRange(items.filter((item) => item.type !== 'music'))).toEqual(DEFAULT_PLAYS_RANGE);
+  });
+});
+
+describe('parseContentQuery', () => {
+  it('detects a leading genre or tag keyword in any case', () => {
+    expect(parseContentQuery('tag: indie')).toEqual({ kind: 'tag', value: 'indie' });
+    expect(parseContentQuery('  Genre:Drama ')).toEqual({ kind: 'genre', value: 'Drama' });
+  });
+
+  it('detects the keyword before a value is typed', () => {
+    expect(parseContentQuery('tag:')).toEqual({ kind: 'tag', value: '' });
+  });
+
+  it('treats other queries as plain text', () => {
+    expect(parseContentQuery('sad indie')).toEqual({ kind: 'text', value: 'sad indie' });
+    expect(parseContentQuery('my tag: indie')).toEqual({ kind: 'text', value: 'my tag: indie' });
+    expect(parseContentQuery('tags indie')).toEqual({ kind: 'text', value: 'tags indie' });
   });
 });
