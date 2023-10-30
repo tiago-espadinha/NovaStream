@@ -186,6 +186,43 @@ select {
   outline-offset: 0;
   border-color: var(--color-focus);
 }
+.search:has(.search-keyword) input {
+  padding-right: 112px;
+}
+.search-keyword {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+/* A recognised genre: or tag: search. The label text and pill outline carry the meaning, not just the color. */
+.keyword-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-secondary);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+.keyword-kind {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-secondary);
+  color: var(--color-on-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+  text-transform: uppercase;
+}
 
 .header-actions {
   grid-area: actions;

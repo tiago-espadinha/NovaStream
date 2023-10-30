@@ -30,10 +30,12 @@ export interface ContentFilterOptions {
   providerMatched?: boolean;
 }
 
-export function parseContentQuery(query: string): { kind: 'text' | 'genre' | 'tag'; value: string } {
+export type QueryKeyword = 'genre' | 'tag';
+
+export function parseContentQuery(query: string): { kind: 'text' | QueryKeyword; value: string } {
   const match = query.trim().match(/^(genre|tag):\s*(.*)$/i);
   if (!match) return { kind: 'text', value: query.trim() };
-  return { kind: match[1].toLowerCase() as 'genre' | 'tag', value: match[2].trim() };
+  return { kind: match[1].toLowerCase() as QueryKeyword, value: match[2].trim() };
 }
 
 function matchesLabel(labels: string[], query: string): boolean {
