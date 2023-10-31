@@ -186,6 +186,43 @@ select {
   outline-offset: 0;
   border-color: var(--color-focus);
 }
+.search:has(.search-keyword) input {
+  padding-right: 112px;
+}
+.search-keyword {
+  position: absolute;
+  right: 44px;
+  top: 50%;
+  translate: 0 -50%;
+  pointer-events: none;
+}
+
+/* A recognised genre: or tag: search. The label text and pill outline carry the meaning, not just the color. */
+.keyword-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  border: 1px solid var(--color-border-secondary);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-secondary);
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  vertical-align: middle;
+}
+.keyword-kind {
+  flex-shrink: 0;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-secondary);
+  color: var(--color-on-primary);
+  font-family: var(--font-body);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.8;
+  text-transform: uppercase;
+}
 
 .header-actions {
   grid-area: actions;
@@ -371,6 +408,28 @@ main {
   color: var(--color-text-muted);
   font-size: var(--font-size-small);
 }
+.results-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+.sort-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.sort-field select {
+  min-height: 44px;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-bg-alt);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  color: var(--color-text);
+  font-size: var(--font-size-control);
+}
 .empty-state {
   color: var(--color-text-muted);
   padding: var(--space-6) 0;
@@ -505,6 +564,108 @@ main {
   padding: var(--space-4) var(--space-6);
   border-top: 1px solid var(--color-border);
 }
+.filter-body {
+  display: grid;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  overflow-y: auto;
+}
+.filter-block {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.filter-label,
+.genre-group-name {
+  padding: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.genre-group {
+  display: grid;
+  gap: var(--space-2);
+}
+.genre-group-name {
+  color: var(--color-text);
+}
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.choice-chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+  cursor: pointer;
+}
+.choice-chip:hover {
+  color: var(--color-text);
+}
+/* Bold text and a doubled border (an inset ring, so the chip keeps its size) mark selection without relying on color. */
+.choice-chip[aria-pressed="true"],
+.choice-chip:has(input:checked) {
+  border-color: var(--color-secondary);
+  box-shadow: inset 0 0 0 1px var(--color-secondary);
+  background: var(--color-surface-secondary);
+  color: var(--color-text);
+  font-weight: 700;
+}
+.choice-chip-text {
+  display: inline-flex;
+  flex-direction: column;
+}
+.choice-chip-text::after {
+  content: attr(data-label);
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 700;
+}
+/* Forced colors drop the ring and fill, so draw the doubled border with a real border. */
+@media (forced-colors: active) {
+  .choice-chip[aria-pressed="true"],
+  .choice-chip:has(input:checked) {
+    border-width: 2px;
+    border-color: Highlight;
+  }
+}
+.choice-chip:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.range-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-small);
+}
+.range-field input {
+  flex: 1 1 180px;
+  max-width: 320px;
+  accent-color: var(--color-secondary);
+}
+.range-field output {
+  min-width: 7ch;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
 /* results grid */
 .grid {
   display: grid;

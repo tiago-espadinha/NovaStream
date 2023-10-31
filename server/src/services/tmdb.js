@@ -101,6 +101,64 @@ export async function searchTv(query) {
     summarize(r, "tv")).filter((tv) => tv.rating !== null && tv.rating !== 0);
 }
 
+function normalizeLabel(value) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\bsci fi\b/g, "science fiction").trim();
+}
+
+function findGenreIds(genre) {
+  const target = normalizeLabel(genre);
+  return Object.entries(GENRE_NAMES)
+    .filter(([, name]) => normalizeLabel(name).includes(target))
+    .map(([id]) => id);
+}
+
+async function discover(type, params) {
+  const data = await tmdbFetch(`/discover/${type}`, {
+    ...params,
+    sort_by: "popularity.desc",
+    include_adult: "false",
+  });
+  return (data.results || [])
+    .map((result) => summarize(result, type))
+    .filter((item) => item.rating !== null && item.rating !== 0);
+}
+
+async function discoverByGenre(type, genre) {
+  const genreIds = findGenreIds(genre);
+  if (!genreIds.length) return [];
+  return discover(type, { with_genres: genreIds.join("|") });
+}
+
+async function discoverByKeyword(type, tag) {
+  const data = await tmdbFetch("/search/keyword", { query: tag });
+  const target = normalizeLabel(tag);
+  const keywords = (data.results || []).filter(
+    (keyword) => normalizeLabel(keyword.name).includes(target),
+  );
+  const resultSets = await Promise.all(
+    keywords.slice(0, 3).map((keyword) => discover(type, { with_keywords: String(keyword.id) })),
+  );
+  const uniqueResults = new Map();
+  for (const item of resultSets.flat()) uniqueResults.set(item.id, item);
+  return [...uniqueResults.values()];
+}
+
+export function searchMoviesByGenre(genre) {
+  return discoverByGenre("movie", genre);
+}
+
+export function searchTvByGenre(genre) {
+  return discoverByGenre("tv", genre);
+}
+
+export function searchMoviesByTag(tag) {
+  return discoverByKeyword("movie", tag);
+}
+
+export function searchTvByTag(tag) {
+  return discoverByKeyword("tv", tag);
+}
+
 export async function getMovieDetail(id) {
   const raw = await tmdbFetch(`/movie/${id}`, {
     append_to_response: "credits,watch/providers",

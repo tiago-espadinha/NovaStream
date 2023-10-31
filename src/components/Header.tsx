@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import type { SessionStatus } from '../context/AuthContext';
 import { isDialogOpen } from '../hooks/useDialog';
 import type { AuthUser, ContentType } from '../types';
+import { parseContentQuery } from '../utils/contentFilters';
 import { isMacPlatform, isSearchShortcut, searchShortcutLabels } from '../utils/searchShortcut';
 import { TypeNav } from './TypeNav';
 
@@ -30,6 +31,7 @@ export function Header({
   onLogout,
 }: HeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
+  const keywordKind = parseContentQuery(query).kind;
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -61,6 +63,7 @@ export function Header({
               id="site-search"
               type="search"
               aria-keyshortcuts={shortcut.aria}
+              aria-describedby={keywordKind === 'text' ? undefined : 'search-keyword'}
               placeholder="Search titles, genre: Drama, tag: Indie…"
               autoComplete="off"
               maxLength={200}
@@ -71,6 +74,16 @@ export function Header({
               <kbd className="search-hint" aria-hidden="true">
                 {shortcut.hint}
               </kbd>
+            )}
+            {keywordKind !== 'text' && (
+              <>
+                <span className="keyword-kind search-keyword" aria-hidden="true">
+                  {keywordKind}
+                </span>
+                <span id="search-keyword" className="visually-hidden">
+                  Searching by {keywordKind}
+                </span>
+              </>
             )}
             {query && (
               <button
