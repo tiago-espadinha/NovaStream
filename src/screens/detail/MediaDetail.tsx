@@ -92,7 +92,12 @@ export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, on
           {(genres.length > 0 || (item.tags ?? []).length > 0) && (
             <div className="detail-genres" aria-label="Search by genre or tag" role="group">
               {genres.map((g) => (
-                <button type="button" className="genre-chip" key={`genre-${g}`} onClick={() => onSearchTerm(g)}>
+                <button
+                  type="button"
+                  className="genre-chip"
+                  key={`genre-${g}`}
+                  onClick={() => onSearchTerm(`genre: ${g}`)}
+                >
                   {g}
                 </button>
               ))}
@@ -101,7 +106,7 @@ export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, on
                   type="button"
                   className="genre-chip tag-chip"
                   key={`tag-${tag}`}
-                  onClick={() => onSearchTerm(tag)}
+                  onClick={() => onSearchTerm(`tag: ${tag}`)}
                 >
                   #{tag}
                 </button>

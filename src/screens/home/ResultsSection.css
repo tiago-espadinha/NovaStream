@@ -16,4 +16,10 @@
     color: var(--color-text-muted);
     font-size: var(--font-size-small);
   }
+  .results-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-3);
+  }
 }
