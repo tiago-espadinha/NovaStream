@@ -12,8 +12,11 @@ import * as api from './services/apiService';
 import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary, type MusicKind } from './types';
 import Spinner from './components/Spinner';
+import { Shelf } from './components/Shelf';
+import { Spotlight } from './components/Spotlight';
 import { FilterDialog } from './components/FilterDialog';
 import { KeywordChip } from './components/KeywordChip';
+import { groupByType, mixAcrossTypes, pickSpotlight } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 import {
@@ -217,9 +220,18 @@ export default function App() {
 
   const trimmedQuery = query.trim();
   const awaitingLiveQuery = !USE_MOCK && !trimmedQuery;
+  const browsing = USE_MOCK && !trimmedQuery;
   // A failed live search with nothing returned is an error, not "no matches". Uses the raw
   // results so that filters hiding everything still show the filter empty state.
   const searchFailed = Boolean(liveError) && liveResults.length === 0;
+  const spotlight = useMemo(() => (browsing ? pickSpotlight(displayedItems) : null), [browsing, displayedItems]);
+  const shelfItems = useMemo(
+    () => displayedItems.filter((item) => item.id !== spotlight?.id),
+    [displayedItems, spotlight],
+  );
+  const mixedShelf = useMemo(() => mixAcrossTypes(shelfItems, 12), [shelfItems]);
+  const typeShelves = useMemo(() => groupByType(shelfItems), [shelfItems]);
+  const showShelves = browsing && activeType === 'all' && shelfItems.length > 0;
   const activeFilterCount =
     selectedGenres.length +
     (activeType === 'all' && selectedCategories.length < ALL_TYPES.length ? 1 : 0) +
@@ -280,6 +292,14 @@ export default function App() {
       <main>
         <AccountNotices notices={accountNotices} />
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
+        {spotlight && (
+          <Spotlight
+            item={spotlight}
+            favorite={isFavorite(spotlight.id)}
+            onToggleFavorite={toggleFavorite}
+            onExplore={setSelectedId}
+          />
+        )}
         {awaitingLiveQuery && (
           <section className="intro" aria-labelledby="intro-title">
             <p className="eyebrow">Live discovery</p>
@@ -365,9 +385,31 @@ export default function App() {
                 )}
               </div>
             </div>
+          ) : showShelves ? (
+            <>
+              <Shelf
+                id="shelf-mix"
+                title="Tonight’s mix"
+                items={mixedShelf}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
+                onSelect={setSelectedId}
+              />
+              {typeShelves.map(({ type, items }) => (
+                <Shelf
+                  key={type}
+                  id={`shelf-${type}`}
+                  title={CONTENT_TYPE_LABELS[type]}
+                  items={items}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
+                  onSelect={setSelectedId}
+                />
+              ))}
+            </>
           ) : (
             <ContentGrid
-              items={displayedItems}
+              items={shelfItems}
               isFavorite={isFavorite}
               onToggleFavorite={toggleFavorite}
               onSelect={setSelectedId}
