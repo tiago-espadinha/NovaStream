@@ -16,7 +16,7 @@ import { Shelf } from './components/Shelf';
 import { Spotlight } from './components/Spotlight';
 import { FilterDialog } from './components/FilterDialog';
 import { KeywordChip } from './components/KeywordChip';
-import { groupByType, mixAcrossTypes, pickSpotlight } from './utils/discovery';
+import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 import {
@@ -29,6 +29,7 @@ import {
 } from './utils/contentFilters';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
+const FAVORITES_SHELF_LIMIT = 8;
 
 function headingFor(query: string, awaitingLiveQuery: boolean, activeType: ContentType | 'all'): ReactNode {
   const parsed = parseContentQuery(query);
@@ -63,6 +64,8 @@ export default function App() {
   const [searchAttempt, setSearchAttempt] = useState(0);
   // The last "All" search, so switching tabs on the same query filters it instead of refetching.
   const allSearch = useRef<AllSearch | null>(null);
+  // One seed per visit: favorites look shuffled but don't jump around as they change.
+  const [favoritesSeed] = useState(() => Math.random().toString(36));
 
   const [detail, setDetail] = useState<ContentItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -232,6 +235,10 @@ export default function App() {
   const mixedShelf = useMemo(() => mixAcrossTypes(shelfItems, 12), [shelfItems]);
   const typeShelves = useMemo(() => groupByType(shelfItems), [shelfItems]);
   const showShelves = browsing && activeType === 'all' && shelfItems.length > 0;
+  const favoritesShelf = useMemo(
+    () => (trimmedQuery ? [] : sampleStable(savedMedia, FAVORITES_SHELF_LIMIT, favoritesSeed)),
+    [trimmedQuery, savedMedia, favoritesSeed],
+  );
   const activeFilterCount =
     selectedGenres.length +
     (activeType === 'all' && selectedCategories.length < ALL_TYPES.length ? 1 : 0) +
@@ -309,6 +316,26 @@ export default function App() {
               Last.fm, Open Library, and RAWG data.
             </p>
           </section>
+        )}
+
+        {favoritesShelf.length > 0 && (
+          <Shelf
+            id="shelf-favorites"
+            level={2}
+            title="Your favorites"
+            items={favoritesShelf}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            onSelect={setSelectedId}
+            endAction={
+              <a className="shelf-see-all" href="/saved">
+                <span>See all in Saved</span>
+                <span className="shelf-see-all-count">
+                  {savedMedia.length} {savedMedia.length === 1 ? 'favorite' : 'favorites'}
+                </span>
+              </a>
+            }
+          />
         )}
 
         <section className="results" aria-labelledby="results-title">
