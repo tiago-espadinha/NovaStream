@@ -10,9 +10,12 @@ interface ContentCardProps {
   favorite: boolean;
   onToggleFavorite: (item: MediaSummary) => void;
   onSelect: (id: string) => void;
+  /** Card titles sit one level below the section that lists them. */
+  headingLevel?: 3 | 4;
 }
 
-export function ContentCard({ item, favorite, onToggleFavorite, onSelect }: ContentCardProps) {
+export function ContentCard({ item, favorite, onToggleFavorite, onSelect, headingLevel = 3 }: ContentCardProps) {
+  const Title = headingLevel === 4 ? 'h4' : 'h3';
   return (
     <article className="card">
       <div className="card-art">
@@ -26,11 +29,11 @@ export function ContentCard({ item, favorite, onToggleFavorite, onSelect }: Cont
       </div>
       <div className="card-body">
         <span className="card-type">{mediaTypeLabel(item)}</span>
-        <h3 className="card-title">
+        <Title className="card-title">
           <button type="button" className="card-open" onClick={() => onSelect(item.id)}>
             {item.title}
           </button>
-        </h3>
+        </Title>
         {item.artist && <p className="card-sub">{item.artist}</p>}
         <div className="card-meta">
           <ScoreBadge item={item} />
