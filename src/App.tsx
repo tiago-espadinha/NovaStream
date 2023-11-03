@@ -12,8 +12,11 @@ import * as api from './services/apiService';
 import { USE_MOCK } from './config';
 import { CONTENT_TYPE_LABELS, type ContentItem, type ContentType, type MediaSummary, type MusicKind } from './types';
 import Spinner from './components/Spinner/Spinner';
+import { Shelf } from './components/Shelf/Shelf';
+import { Spotlight } from './screens/home/Spotlight';
 import { FilterDialog } from './screens/home/FilterDialog';
 import { KeywordChip } from './components/KeywordChip/KeywordChip';
+import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
 import {
@@ -30,6 +33,7 @@ import './components/SiteFooter/SiteFooter.css';
 import './screens/detail/SeriesEpisodes.css';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
+const FAVORITES_SHELF_LIMIT = 8;
 
 function headingFor(query: string, awaitingLiveQuery: boolean, activeType: ContentType | 'all'): ReactNode {
   const parsed = parseContentQuery(query);
@@ -64,6 +68,8 @@ export default function App() {
   const [searchAttempt, setSearchAttempt] = useState(0);
   // The last "All" search, so switching tabs on the same query filters it instead of refetching.
   const allSearch = useRef<AllSearch | null>(null);
+  // One seed per visit: favorites look shuffled but don't jump around as they change.
+  const [favoritesSeed] = useState(() => Math.random().toString(36));
 
   const [detail, setDetail] = useState<ContentItem | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -219,9 +225,22 @@ export default function App() {
 
   const trimmedQuery = query.trim();
   const awaitingLiveQuery = !USE_MOCK && !trimmedQuery;
+  const browsing = USE_MOCK && !trimmedQuery;
   // A failed live search with nothing returned is an error, not "no matches". Uses the raw
   // results so that filters hiding everything still show the filter empty state.
   const searchFailed = Boolean(liveError) && liveResults.length === 0;
+  const spotlight = useMemo(() => (browsing ? pickSpotlight(displayedItems) : null), [browsing, displayedItems]);
+  const shelfItems = useMemo(
+    () => displayedItems.filter((item) => item.id !== spotlight?.id),
+    [displayedItems, spotlight],
+  );
+  const mixedShelf = useMemo(() => mixAcrossTypes(shelfItems, 12), [shelfItems]);
+  const typeShelves = useMemo(() => groupByType(shelfItems), [shelfItems]);
+  const showShelves = browsing && activeType === 'all' && shelfItems.length > 0;
+  const favoritesShelf = useMemo(
+    () => (trimmedQuery ? [] : sampleStable(savedMedia, FAVORITES_SHELF_LIMIT, favoritesSeed)),
+    [trimmedQuery, savedMedia, favoritesSeed],
+  );
   const activeFilterCount =
     selectedGenres.length +
     (activeType === 'all' && selectedCategories.length < ALL_TYPES.length ? 1 : 0) +
@@ -282,6 +301,14 @@ export default function App() {
       <main>
         <AccountNotices notices={accountNotices} />
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
+        {spotlight && (
+          <Spotlight
+            item={spotlight}
+            favorite={isFavorite(spotlight.id)}
+            onToggleFavorite={toggleFavorite}
+            onExplore={setSelectedId}
+          />
+        )}
         {awaitingLiveQuery && (
           <section className="intro" aria-labelledby="intro-title">
             <p className="eyebrow">Live discovery</p>
@@ -291,6 +318,26 @@ export default function App() {
               and RAWG data.
             </p>
           </section>
+        )}
+
+        {favoritesShelf.length > 0 && (
+          <Shelf
+            id="shelf-favorites"
+            level={2}
+            title="Your favorites"
+            items={favoritesShelf}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            onSelect={setSelectedId}
+            endAction={
+              <a className="shelf-see-all" href="/saved">
+                <span>See all in Saved</span>
+                <span className="shelf-see-all-count">
+                  {savedMedia.length} {savedMedia.length === 1 ? 'favorite' : 'favorites'}
+                </span>
+              </a>
+            }
+          />
         )}
 
         <section className="results" aria-labelledby="results-title">
@@ -369,9 +416,31 @@ export default function App() {
                 )}
               </div>
             </div>
+          ) : showShelves ? (
+            <>
+              <Shelf
+                id="shelf-mix"
+                title="Tonight’s mix"
+                items={mixedShelf}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
+                onSelect={setSelectedId}
+              />
+              {typeShelves.map(({ type, items }) => (
+                <Shelf
+                  key={type}
+                  id={`shelf-${type}`}
+                  title={CONTENT_TYPE_LABELS[type]}
+                  items={items}
+                  isFavorite={isFavorite}
+                  onToggleFavorite={toggleFavorite}
+                  onSelect={setSelectedId}
+                />
+              ))}
+            </>
           ) : (
             <ContentGrid
-              items={displayedItems}
+              items={shelfItems}
               isFavorite={isFavorite}
               onToggleFavorite={toggleFavorite}
               onSelect={setSelectedId}
