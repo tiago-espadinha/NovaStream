@@ -101,6 +101,22 @@ export async function searchTv(query) {
     summarize(r, "tv")).filter((tv) => tv.rating !== null && tv.rating !== 0);
 }
 
+// New releases often trend before anyone has rated them; show "no rating" rather than 0.
+async function trending(type) {
+  const data = await tmdbFetch(`/trending/${type}/week`);
+  return (data.results || [])
+    .map((result) => summarize(result, type))
+    .map((item) => (item.rating === 0 ? { ...item, rating: null } : item));
+}
+
+export function trendingMovies() {
+  return trending("movie");
+}
+
+export function trendingTv() {
+  return trending("tv");
+}
+
 function normalizeLabel(value) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\bsci fi\b/g, "science fiction").trim();
 }

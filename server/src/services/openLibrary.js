@@ -45,6 +45,26 @@ export async function searchBooksBySubject(subject) {
   );
 }
 
+// Not part of Open Library's documented API (it backs their site's Trending page), so its
+// shape may change; a failure only removes books from the trending shelf.
+export async function trendingBooks() {
+  const url = new URL(`${BASE}/trending/weekly.json`);
+  url.searchParams.set('limit', '20');
+  // Without `fields` the trending works carry no ratings, only edition and cover data.
+  url.searchParams.set('fields', SEARCH_FIELDS);
+  const res = await fetch(url, {
+    // Open Library asks clients to identify themselves.
+    headers: { 'User-Agent': 'NovaStream/0.1.0 (https://github.com/tiago-espadinha/NovaStream)' },
+  });
+  if (!res.ok) throw upstreamFailure('Open Library', res);
+  const data = await res.json();
+  // Unrated works trend too; show "no rating" rather than 0, as search drops them.
+  return (data.works || [])
+    .filter((work) => work.key && work.title)
+    .map(summarize)
+    .map((book) => (book.rating === 0 ? { ...book, rating: null } : book));
+}
+
 async function fetchJson(path) {
   const res = await fetch(`${BASE}${path}`);
   // Ratings/author lookups 404 fairly often on Open Library (e.g. unrated works) —

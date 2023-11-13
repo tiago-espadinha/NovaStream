@@ -322,6 +322,20 @@ async function songFromMatch(match) {
   };
 }
 
+// Matches how many items per type the trending feed shows.
+const TRENDING_TRACK_LIMIT = 4;
+
+export async function trendingMusic() {
+  const data = await lastfmFetch({
+    method: "chart.gettoptracks",
+    limit: TRENDING_TRACK_LIMIT,
+  });
+  const matches = toArray(extractMatches(data, "tracks.track"))
+    .filter((track) => track?.name)
+    .slice(0, TRENDING_TRACK_LIMIT); // each match costs one enrichment request
+  return Promise.all(matches.map(songFromMatch));
+}
+
 export async function searchMusic(query, kind = "all") {
   const searchers = {
     artist: () => searchArtists(query),

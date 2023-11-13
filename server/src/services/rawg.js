@@ -71,6 +71,24 @@ export async function searchGames(query) {
     .filter((game) => game.rating != null && game.rating !== 0);
 }
 
+const TRENDING_WINDOW_DAYS = 30;
+
+// RAWG has no trending endpoint; its docs suggest recent releases ordered by how many
+// users added them, which is what the RAWG site calls "popular in the last 30 days".
+export async function trendingGames() {
+  const now = new Date();
+  const since = new Date(now.getTime() - TRENDING_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+  const day = (date) => date.toISOString().slice(0, 10);
+  const data = await rawgFetch("/games", {
+    dates: `${day(since)},${day(now)}`,
+    ordering: "-added",
+    page_size: 20,
+  });
+  return (data.results || [])
+    .map(summarize)
+    .map((game) => (game.rating === 0 ? { ...game, rating: null } : game));
+}
+
 export function searchGamesByGenre(genre) {
   return searchGamesByTaxonomy(genre, "genres", "/genres");
 }
