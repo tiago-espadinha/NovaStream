@@ -5,6 +5,7 @@ import { searchRouter } from './routes/search.js';
 import { mediaRouter } from './routes/media.js';
 import { authRouter } from './routes/auth.js';
 import { savedRouter } from './routes/saved.js';
+import { trendingRouter } from './routes/trending.js';
 import { requireAuthConfig } from './middleware/auth.js';
 
 const app = express();
@@ -15,6 +16,7 @@ app.use(express.json());
 app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
 app.use('/api/search', searchRouter);
+app.use('/api/trending', trendingRouter);
 app.use('/api/media', mediaRouter);
 app.use('/api/auth', requireAuthConfig, authRouter);
 app.use('/api/saved', requireAuthConfig, savedRouter);
