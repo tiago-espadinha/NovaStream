@@ -220,3 +220,7 @@ export const mockContent: ContentItem[] = [
     platforms: ['PC', 'Nintendo Switch'],
   },
 ];
+
+// Mock-mode stand-in for the live trending feed (GET /api/trending).
+const MOCK_TRENDING_IDS = ['g2', 't1', 'b3', 'm3', 'mu1', 't3', 'g1', 'b1'];
+export const mockTrending: ContentItem[] = MOCK_TRENDING_IDS.flatMap((id) => mockContent.filter((item) => item.id === id));

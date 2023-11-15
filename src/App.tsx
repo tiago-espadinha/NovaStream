@@ -5,8 +5,9 @@ import { MediaDetail } from './components/MediaDetail';
 import { LoginModal } from './components/LoginModal';
 import { AccountNotices, type AccountNotice } from './components/AccountNotices';
 import { DetailStatus } from './components/DetailStatus';
-import { mockContent } from './data/mockData';
+import { mockContent, mockTrending } from './data/mockData';
 import { useFavorites } from './hooks/useFavorites';
+import { useTrending } from './hooks/useTrending';
 import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
 import { USE_MOCK } from './config';
@@ -75,6 +76,7 @@ export default function App() {
   const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
   const favorites = useFavorites();
   const { isFavorite, toggleFavorite, savedMedia } = favorites;
+  const trending = useTrending(!USE_MOCK);
 
   // --- search ---
   useEffect(() => {
@@ -239,6 +241,16 @@ export default function App() {
     () => (trimmedQuery ? [] : sampleStable(savedMedia, FAVORITES_SHELF_LIMIT, favoritesSeed)),
     [trimmedQuery, savedMedia, favoritesSeed],
   );
+  const trendingItems = useMemo(
+    // The spotlight already features its title right above the shelf.
+    () => (USE_MOCK ? mockTrending : trending.items).filter((item) => item.id !== spotlight?.id),
+    [trending.items, spotlight],
+  );
+  // Shown before a search while it loads, has items, or has a problem worth explaining;
+  // a feed that answered with nothing is simply left out.
+  const showTrending = !trimmedQuery && (trendingItems.length > 0 || trending.loading || Boolean(trending.problem));
+  // Like search, only a feed with nothing to show is an error; missing types are a warning.
+  const trendingFailed = Boolean(trending.problem) && trendingItems.length === 0;
   const activeFilterCount =
     selectedGenres.length +
     (activeType === 'all' && selectedCategories.length < ALL_TYPES.length ? 1 : 0) +
@@ -334,6 +346,37 @@ export default function App() {
                   {savedMedia.length} {savedMedia.length === 1 ? 'favorite' : 'favorites'}
                 </span>
               </a>
+            }
+          />
+        )}
+        {showTrending && (
+          <Shelf
+            id="shelf-trending"
+            level={2}
+            title="Trending this week"
+            items={trendingItems}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            onSelect={setSelectedId}
+            notice={
+              trending.loading ? (
+                <Spinner label="Loading what’s trending…" />
+              ) : (
+                trending.problem && (
+                  <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
+                    <p role="status">{trending.problem.message}</p>
+                    {trending.problem.retryable && (
+                      <button
+                        type="button"
+                        className="btn btn-ghost"
+                        onClick={trending.retry}
+                      >
+                        Try again
+                      </button>
+                    )}
+                  </div>
+                )
+              )
             }
           />
         )}

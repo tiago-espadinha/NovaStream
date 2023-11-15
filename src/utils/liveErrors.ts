@@ -51,6 +51,29 @@ export function describeSearchErrors(
   return { message, retryable };
 }
 
+/**
+ * Copy for provider failures in the Home trending shelf, or null when every source answered.
+ * With nothing to show it reads as a failure; otherwise it names what's missing.
+ */
+export function describeTrendingErrors(errors: SearchError[], resultCount: number): LiveProblem | null {
+  if (errors.length === 0) return null;
+  const code = sharedCode(errors);
+  const retryable = code !== 'not_configured';
+
+  if (resultCount === 0) {
+    if (code === 'not_configured') return { message: 'Trending isn’t set up on the server yet.', retryable };
+    if (code === 'timeout') return { message: 'Trending took too long to load. Try again in a moment.', retryable };
+    return { message: 'Trending couldn’t be loaded right now.', retryable };
+  }
+
+  // A source the server has no key for is a permanent deployment gap, not something a visitor
+  // can act on, so it stays in the server log rather than warning on every visit.
+  const transient = errors.filter((error) => error.code !== 'not_configured');
+  if (transient.length === 0) return null;
+  const what = sharedCode(transient) === 'timeout' ? 'didn’t respond in time' : 'couldn’t be reached';
+  return { message: `${listTypes(transient)} ${what} — showing what’s trending elsewhere.`, retryable: true };
+}
+
 /** Copy for a search request that failed outright (network down, backend not running, bad input). */
 export function describeSearchFailure(error: unknown): LiveProblem {
   // 400s carry the server's validation message, which is written for users.

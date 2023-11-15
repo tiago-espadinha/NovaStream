@@ -51,6 +51,11 @@ export function searchMedia(
   return request<SearchResponse>(`/search?${params.toString()}`);
 }
 
+// Same shape as search: items from every source that answered, plus one error per source that didn't.
+export function getTrending() {
+  return request<SearchResponse>('/trending');
+}
+
 export function getMediaDetail(type: ContentType, externalId: string) {
   return request<ContentItem>(`/media/${type}/${externalId}`);
 }

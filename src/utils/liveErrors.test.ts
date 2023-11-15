@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../services/apiService';
-import { describeDetailError, describeSearchErrors, describeSearchFailure } from './liveErrors';
+import { describeDetailError, describeSearchErrors, describeSearchFailure, describeTrendingErrors } from './liveErrors';
 
 describe('describeSearchErrors', () => {
   it('returns null when every source answered', () => {
@@ -72,5 +72,56 @@ describe('describeDetailError', () => {
     const problem = describeDetailError(new Error('TMDb request failed: 401 Unauthorized'));
     expect(problem.message).toBe('This title couldn’t be loaded right now.');
     expect(problem.retryable).toBe(true);
+  });
+});
+
+describe('describeTrendingErrors', () => {
+  it('returns null when every source answered', () => {
+    expect(describeTrendingErrors([], 8)).toBeNull();
+  });
+
+  it('names the missing types when other sources still have trending items', () => {
+    const problem = describeTrendingErrors(
+      [
+        { type: 'game', code: 'unavailable' },
+        { type: 'music', code: 'unavailable' },
+      ],
+      12,
+    );
+    expect(problem).toEqual({
+      message: 'Games and Music couldn’t be reached — showing what’s trending elsewhere.',
+      retryable: true,
+    });
+  });
+
+  it('stays quiet about unconfigured sources while others have items, but names transient ones', () => {
+    expect(describeTrendingErrors([{ type: 'game', code: 'not_configured' }], 4)).toBeNull();
+    expect(
+      describeTrendingErrors(
+        [
+          { type: 'game', code: 'not_configured' },
+          { type: 'tv', code: 'timeout' },
+        ],
+        4,
+      ),
+    ).toEqual({ message: 'TV didn’t respond in time — showing what’s trending elsewhere.', retryable: true });
+  });
+
+  it('reads as a failure when nothing could be shown', () => {
+    const problem = describeTrendingErrors(
+      [
+        { type: 'movie', code: 'timeout' },
+        { type: 'book', code: 'timeout' },
+      ],
+      0,
+    );
+    expect(problem).toEqual({ message: 'Trending took too long to load. Try again in a moment.', retryable: true });
+  });
+
+  it('does not offer a retry when the server has no provider keys', () => {
+    expect(describeTrendingErrors([{ type: 'movie', code: 'not_configured' }], 0)).toEqual({
+      message: 'Trending isn’t set up on the server yet.',
+      retryable: false,
+    });
   });
 });
