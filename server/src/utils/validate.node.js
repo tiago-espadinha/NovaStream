@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseCredentials, parseMediaSnapshot, parsePreferences } from './validate.js';
+import { parseCollections, parseCredentials, parseMediaSnapshot, parsePreferences } from './validate.js';
 
 test('credentials: rejects non-string or missing input with a 400-safe message instead of crashing', () => {
   for (const body of [undefined, {}, { email: ['a@b.co'], password: 'longenough' }, { email: 'a@b.co', password: 12345678 }]) {
@@ -66,6 +66,61 @@ test('media snapshot: keeps music play stats only when both counts are present',
     { listeners: '10', playcount: '20' },
   );
   assert.equal(parseMediaSnapshot({ ...song, playStats: { listeners: '10' } }).value.playStats, undefined);
+});
+
+const dune = { id: 'movie-1', title: 'Dune', type: 'movie' };
+const duneSnapshot = parseMediaSnapshot(dune).value;
+
+test('collections: keeps valid custom collections and assignments with their snapshots', () => {
+  const { value } = parseCollections({
+    custom: [{ id: 'custom-abc', name: ' Rainy Sundays ', contentTypes: ['movie', 'movie', 'podcast'] }],
+    assignments: { 'movie-1': ['to-watch', 'custom-abc'] },
+    media: { 'movie-1': { ...dune, overview: 'dropped' } },
+  });
+  assert.deepEqual(value, {
+    custom: [{ id: 'custom-abc', name: 'Rainy Sundays', contentTypes: ['movie'] }],
+    assignments: { 'movie-1': ['to-watch', 'custom-abc'] },
+    media: { 'movie-1': duneSnapshot },
+  });
+});
+
+test('collections: drops entries that do not fit instead of rejecting the whole document', () => {
+  const { value } = parseCollections({
+    custom: [
+      { id: 'custom-a', name: 'Club', contentTypes: ['book'] },
+      { id: 'custom-b', name: 'club', contentTypes: ['book'] }, // duplicate name
+      { id: 'evil', name: 'Bad id', contentTypes: ['book'] },
+      { id: 'custom-c', name: 'x'.repeat(33), contentTypes: ['book'] },
+      { id: 'custom-d', name: 'No formats', contentTypes: [] },
+    ],
+    assignments: {
+      'movie-1': ['ghost-collection', 'watched'],
+      'movie-2': ['watched'], // no snapshot
+      'movie-3': ['watched'], // snapshot for a different id
+      'movie-4': 'watched',
+    },
+    media: { 'movie-1': dune, 'movie-3': dune },
+  });
+  assert.deepEqual(value.custom.map(({ id }) => id), ['custom-a']);
+  assert.deepEqual(value.assignments, { 'movie-1': ['watched'] });
+  assert.deepEqual(Object.keys(value.media), ['movie-1']);
+});
+
+test('collections: invalid entries do not use up the 500-title limit', () => {
+  const assignments = {};
+  const media = {};
+  for (let i = 0; i < 600; i += 1) assignments[`bad-${i}`] = ['watched']; // no snapshots
+  for (let i = 0; i < 3; i += 1) {
+    assignments[`movie-${i}`] = ['watched'];
+    media[`movie-${i}`] = { id: `movie-${i}`, title: `Film ${i}`, type: 'movie' };
+  }
+  const { value } = parseCollections({ custom: [], assignments, media });
+  assert.deepEqual(Object.keys(value.assignments), ['movie-0', 'movie-1', 'movie-2']);
+});
+
+test('collections: rejects a body that is not an object', () => {
+  assert.ok(parseCollections(null).error);
+  assert.ok(parseCollections([]).error);
 });
 
 test('preferences: accepts known keys only and validates their values', () => {
