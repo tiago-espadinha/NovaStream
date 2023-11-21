@@ -1,5 +1,6 @@
 import { API_BASE_URL } from '../config';
 import type { AuthUser, ContentItem, ContentType, MediaSummary, MusicKind, UserPreferences } from '../types';
+import type { CollectionsDoc } from '../utils/collections';
 
 export type ProviderErrorCode = 'not_configured' | 'not_found' | 'timeout' | 'unavailable';
 
@@ -103,6 +104,21 @@ export function saveMedia(token: string, media: MediaSummary) {
   return request<{ savedMedia: MediaSummary[] }>(
     '/saved',
     { method: 'POST', body: JSON.stringify(media) },
+    token,
+  );
+}
+
+// ---- collections (signed-in users; guests keep theirs in localStorage) ----
+
+export function getCollections(token: string) {
+  return request<{ collections: CollectionsDoc }>('/collections', {}, token);
+}
+
+/** Replaces the whole document; the server drops entries it can't accept. */
+export function saveCollections(token: string, collections: CollectionsDoc) {
+  return request<{ collections: CollectionsDoc }>(
+    '/collections',
+    { method: 'PUT', body: JSON.stringify(collections) },
     token,
   );
 }
