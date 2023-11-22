@@ -33,6 +33,28 @@ export const EMPTY_COLLECTIONS: CollectionsDoc = { custom: [], assignments: {}, 
 // Same limits the server enforces (server/src/utils/validate.js), so nothing is silently dropped there.
 export const MAX_CUSTOM_COLLECTIONS = 50;
 export const MAX_ORGANIZED_TITLES = 500;
+export const MAX_COLLECTION_NAME = 32;
+
+export interface CollectionProblem {
+  field: 'name' | 'formats';
+  message: string;
+}
+
+/**
+ * What stops a new collection from being created, or null. An empty name has no message:
+ * the create button just stays disabled until one is typed.
+ */
+export function newCollectionProblem(
+  name: string,
+  contentTypes: ContentType[],
+  collections: SavedCollection[],
+): CollectionProblem | null {
+  const trimmed = name.trim().toLowerCase();
+  const duplicate = trimmed && collections.find((collection) => collection.name.toLowerCase() === trimmed);
+  if (duplicate) return { field: 'name', message: `You already have a collection called “${duplicate.name}”.` };
+  if (contentTypes.length === 0) return { field: 'formats', message: 'Pick at least one format.' };
+  return null;
+}
 
 export function exceedsLimits(doc: CollectionsDoc): boolean {
   return doc.custom.length > MAX_CUSTOM_COLLECTIONS || Object.keys(doc.assignments).length > MAX_ORGANIZED_TITLES;
@@ -50,6 +72,17 @@ export function countDropped(sent: CollectionsDoc, stored: CollectionsDoc): numb
 export function toSummary(item: MediaSummary): MediaSummary {
   const { id, title, type, rating, genres, tags, releaseYear, posterUrl, gradientFrom, gradientTo, artist, musicKind, playStats } = item;
   return { id, title, type, rating, genres, tags, releaseYear, posterUrl, gradientFrom, gradientTo, artist, musicKind, playStats };
+}
+
+/** Adds a collection and, when given one it can hold, a title to it in the same change. */
+export function addCollection(doc: CollectionsDoc, collection: SavedCollection, item?: MediaSummary): CollectionsDoc {
+  const next = { ...doc, custom: [...doc.custom, collection] };
+  if (!item || !collection.contentTypes.includes(item.type)) return next;
+  return {
+    ...next,
+    assignments: { ...doc.assignments, [item.id]: [...(doc.assignments[item.id] ?? []), collection.id] },
+    media: { ...doc.media, [item.id]: toSummary(item) },
+  };
 }
 
 export function isEmptyCollections(doc: CollectionsDoc): boolean {

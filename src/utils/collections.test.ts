@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { MediaSummary } from '../types';
 import {
   EMPTY_COLLECTIONS,
+  addCollection,
   MAX_CUSTOM_COLLECTIONS,
   countDropped,
   exceedsLimits,
   isEmptyCollections,
   mergeCollections,
+  newCollectionProblem,
   toSummary,
   type CollectionsDoc,
 } from './collections';
@@ -95,5 +97,43 @@ describe('isEmptyCollections', () => {
     expect(isEmptyCollections(EMPTY_COLLECTIONS)).toBe(true);
     expect(isEmptyCollections({ custom: [], assignments: { 'movie-1': [] }, media: {} })).toBe(true);
     expect(isEmptyCollections({ custom: [], assignments: { 'movie-1': ['watched'] }, media: {} })).toBe(false);
+  });
+});
+
+describe('newCollectionProblem', () => {
+  const existing = [{ id: 'custom-a', name: 'Rainy Sundays', contentTypes: ['movie' as const] }];
+
+  it('flags a name already in use, ignoring case and surrounding spaces', () => {
+    expect(newCollectionProblem('  rainy sundays ', ['movie'], existing)).toEqual({
+      field: 'name',
+      message: 'You already have a collection called “Rainy Sundays”.',
+    });
+  });
+
+  it('asks for a format when none is picked', () => {
+    expect(newCollectionProblem('Club Picks', [], existing)).toEqual({ field: 'formats', message: 'Pick at least one format.' });
+  });
+
+  it('has nothing to say about an empty name or a valid one', () => {
+    expect(newCollectionProblem('   ', ['movie'], existing)).toBeNull();
+    expect(newCollectionProblem('Club Picks', ['book'], existing)).toBeNull();
+  });
+});
+
+describe('addCollection', () => {
+  const collection = { id: 'custom-n', name: 'Night In', contentTypes: ['movie' as const] };
+
+  it('adds the collection with the title already in it, keeping its other collections', () => {
+    const doc: CollectionsDoc = { custom: [], assignments: { 'movie-1': ['watched'] }, media: { 'movie-1': media('movie-1') } };
+    const next = addCollection(doc, collection, { ...media('movie-1'), overview: 'Long synopsis' } as MediaSummary);
+    expect(next.custom).toEqual([collection]);
+    expect(next.assignments['movie-1']).toEqual(['watched', 'custom-n']);
+    expect(next.media['movie-1']).not.toHaveProperty('overview');
+  });
+
+  it('only adds the collection when the title’s format is not one it covers', () => {
+    const book = { ...media('book-1'), type: 'book' as const };
+    expect(addCollection(EMPTY_COLLECTIONS, collection, book)).toEqual({ ...EMPTY_COLLECTIONS, custom: [collection] });
+    expect(addCollection(EMPTY_COLLECTIONS, collection)).toEqual({ ...EMPTY_COLLECTIONS, custom: [collection] });
   });
 });

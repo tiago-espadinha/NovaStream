@@ -5,7 +5,9 @@ import type { ContentType, MediaSummary } from '../types';
 import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
 import {
   BUILT_IN_COLLECTIONS,
+  addCollection,
   EMPTY_COLLECTIONS,
+  MAX_COLLECTION_NAME,
   MAX_CUSTOM_COLLECTIONS,
   MAX_ORGANIZED_TITLES,
   countDropped,
@@ -275,19 +277,28 @@ export function useCollections() {
     });
   }, [collections, doc.assignments, update]);
 
-  const createCollection = useCallback((name: string, contentTypes: ContentType[]) => {
+  /** Creates a collection; given a title it can hold, the title goes straight into it. */
+  const createCollection = useCallback((name: string, contentTypes: ContentType[], item?: MediaSummary) => {
     const normalizedName = name.trim();
-    if (!normalizedName || !contentTypes.length || collections.some(
+    if (!normalizedName || normalizedName.length > MAX_COLLECTION_NAME || !contentTypes.length || collections.some(
       (collection) => collection.name.toLowerCase() === normalizedName.toLowerCase(),
     )) return null;
     if (doc.custom.length >= MAX_CUSTOM_COLLECTIONS) {
       setSaveError(`You can have up to ${MAX_CUSTOM_COLLECTIONS} collections. Delete one to add another.`);
       return null;
     }
+    // A title new to collections counts toward the organized-title cap; past it, the collection
+    // is still created, just without the title.
+    const assignable = item && (item.id in doc.assignments || Object.keys(doc.assignments).length < MAX_ORGANIZED_TITLES)
+      ? item
+      : undefined;
+    if (item && !assignable) {
+      setSaveError(`You can organize up to ${MAX_ORGANIZED_TITLES} titles in collections. Remove some to add more.`);
+    }
     const id = `custom-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
     const collection = { id, name: normalizedName, contentTypes };
-    return update((current) => ({ ...current, custom: [...current.custom, collection] })) ? collection : null;
-  }, [collections, doc.custom.length, update]);
+    return update((current) => addCollection(current, collection, assignable)) ? collection : null;
+  }, [collections, doc.custom.length, doc.assignments, update]);
 
   const deleteCollection = useCallback((collectionId: string) => {
     update((current) => ({
