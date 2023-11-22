@@ -578,8 +578,11 @@ export default function App() {
               favorite={isFavorite(detail.id)}
               onToggleFavorite={toggleFavorite}
               collections={collectionsState.collectionsFor(detail.type)}
+              allCollections={collectionsState.collections}
               collectionIds={collectionsState.assignments[detail.id] ?? []}
+              collectionsReady={collectionsState.status === 'ready'}
               onToggleCollection={(collectionId) => collectionsState.toggleCollection(detail, collectionId)}
+              onCreateCollection={(name, contentTypes) => collectionsState.createCollection(name, contentTypes, detail)}
               onSearchTerm={(searchQuery) => {
                 setQuery(searchQuery);
                 setSelectedId(null);
