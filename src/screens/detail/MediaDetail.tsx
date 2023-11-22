@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useDialog } from '../../hooks/useDialog';
 import type { ContentItem } from '../../types';
+import type { SavedCollection } from '../../utils/collections';
 import { mediaTypeLabel } from '../../utils/discovery';
 import { fallbackArtwork } from '../../utils/gradient';
 import { ScoreBadge } from '../../components/ScoreBadge/ScoreBadge';
 import HeartIcon from '../../components/HeartIcon/HeartIcon';
+import { CollectionMenu } from './CollectionMenu';
 import { ArtworkViewer } from './ArtworkViewer';
 import './MediaDetail.css';
 
@@ -12,11 +14,23 @@ interface MediaDetailProps {
   item: ContentItem;
   favorite: boolean;
   onToggleFavorite: (item: ContentItem) => void;
+  collections: SavedCollection[];
+  collectionIds: string[];
+  onToggleCollection: (collectionId: string) => void;
   onSearchTerm: (query: string) => void;
   onClose: () => void;
 }
 
-export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, onClose }: MediaDetailProps) {
+export function MediaDetail({
+  item,
+  favorite,
+  onToggleFavorite,
+  collections,
+  collectionIds,
+  onToggleCollection,
+  onSearchTerm,
+  onClose,
+}: MediaDetailProps) {
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [viewingArtwork, setViewingArtwork] = useState(false);
   const streamingPlatforms = item.platforms
@@ -84,6 +98,13 @@ export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, on
                 </span>
                 {favorite ? 'Saved to favorites' : 'Save to favorites'}
               </button>
+              {collections.length > 0 && (
+                <CollectionMenu
+                  collections={collections}
+                  collectionIds={collectionIds}
+                  onToggleCollection={onToggleCollection}
+                />
+              )}
             </div>
           </div>
         </div>

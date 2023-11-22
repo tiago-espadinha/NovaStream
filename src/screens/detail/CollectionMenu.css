@@ -1,0 +1,55 @@
+@layer screens {
+  .collection-menu {
+    position: relative;
+  }
+  .collection-trigger svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+  }
+  .collection-trigger.active {
+    border-color: var(--color-secondary);
+  }
+  .count-badge {
+    display: grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 var(--space-1);
+    border-radius: var(--radius-pill);
+    background: var(--color-secondary);
+    color: var(--color-on-primary);
+    font-size: var(--font-size-label);
+    font-weight: 700;
+  }
+  .collection-popover {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    z-index: 3;
+    width: min(340px, calc(100vw - 2 * var(--space-4)));
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-card);
+    background: var(--color-surface);
+    box-shadow: var(--shadow-modal);
+    animation: dialog-in var(--transition-fast);
+  }
+  .collection-popover[data-placement='above'] {
+    top: auto;
+    bottom: calc(100% + var(--space-2));
+  }
+  .collection-popover {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .collection-popover-link {
+    color: var(--color-secondary);
+    font-size: var(--font-size-small);
+  }
+}

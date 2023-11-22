@@ -243,6 +243,35 @@
     letter-spacing: 0.1em;
     text-transform: uppercase;
   }
+  /* collection toggles (detail panel, new-collection form) */
+  .toggle-group {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+  .toggle-group legend {
+    margin-bottom: var(--space-2);
+    padding: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-label);
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .toggle-group-hint {
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+  }
+  .toggle-group-empty {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+  }
+  .toggle-group-empty a {
+    color: var(--color-secondary);
+  }
   .field-error {
     color: var(--color-danger);
     font-size: var(--font-size-small);
