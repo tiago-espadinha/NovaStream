@@ -1,21 +1,41 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
+import type { ContentType } from '../../types';
 import type { SavedCollection } from '../../utils/collections';
+import { NewCollectionForm } from './NewCollectionForm';
 import { ToggleChip } from '../../components/ToggleChip/ToggleChip';
 import './CollectionMenu.css';
 
 interface CollectionMenuProps {
+  itemType: ContentType;
+  /** The collections that can hold this title's format. */
   collections: SavedCollection[];
+  allCollections: SavedCollection[];
   collectionIds: string[];
+  ready: boolean;
   onToggleCollection: (collectionId: string) => void;
+  onCreateCollection: (name: string, contentTypes: ContentType[]) => SavedCollection | null;
 }
 
 /** A compact trigger beside Save; the collection choices only appear when asked for. */
-export function CollectionMenu({ collections, collectionIds, onToggleCollection }: CollectionMenuProps) {
+export function CollectionMenu({
+  itemType,
+  collections,
+  allCollections,
+  collectionIds,
+  ready,
+  onToggleCollection,
+  onCreateCollection,
+}: CollectionMenuProps) {
   const [open, setOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  // What the last creation did, kept as it happened rather than tracking later toggles.
+  const [created, setCreated] = useState<{ name: string; added: boolean } | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+  const createButtonRef = useRef<HTMLButtonElement>(null);
+  const focusCreateButton = useRef(false);
   const [position, setPosition] = useState<{ placement: 'below' | 'above'; maxHeight?: number }>({
     placement: 'below',
   });
@@ -36,7 +56,26 @@ export function CollectionMenu({ collections, collectionIds, onToggleCollection 
     const placement = height > spaceBelow && spaceAbove > spaceBelow ? 'above' : 'below';
     const room = placement === 'above' ? spaceAbove : spaceBelow;
     setPosition({ placement, maxHeight: height > room ? Math.max(room, 160) : undefined });
+  }, [open, creating]);
+
+  useEffect(() => {
+    if (open) return;
+    setCreating(false);
+    setCreated(null);
   }, [open]);
+
+  // Leaving the form puts focus back where it was opened from.
+  useEffect(() => {
+    if (creating || !focusCreateButton.current) return;
+    focusCreateButton.current = false;
+    createButtonRef.current?.focus();
+  }, [creating]);
+
+  const closeForm = (collection: SavedCollection | null) => {
+    focusCreateButton.current = true;
+    setCreated(collection && { name: collection.name, added: collection.contentTypes.includes(itemType) });
+    setCreating(false);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -120,7 +159,33 @@ export function CollectionMenu({ collections, collectionIds, onToggleCollection 
             ) : (
               <p className="toggle-group-empty">None cover this format yet.</p>
             )}
+            <p className={`popover-created${created ? ' field-success' : ''}`} role="status">
+              {created &&
+                (created.added ? `Created “${created.name}” and added this title.` : `Created “${created.name}”.`)}
+            </p>
           </fieldset>
+          {creating ? (
+            <NewCollectionForm
+              itemType={itemType}
+              allCollections={allCollections}
+              onCreate={onCreateCollection}
+              onCancel={() => closeForm(null)}
+              onCreated={closeForm}
+            />
+          ) : (
+            <button
+              ref={createButtonRef}
+              type="button"
+              className="btn btn-ghost popover-create-toggle"
+              disabled={!ready}
+              onClick={() => {
+                setCreated(null);
+                setCreating(true);
+              }}
+            >
+              New collection
+            </button>
+          )}
           <a className="collection-popover-link" href="/saved">
             Manage collections in Saved
           </a>
