@@ -7,6 +7,7 @@ import { AccountNotices, type AccountNotice } from './components/AccountNotices'
 import { DetailStatus } from './components/DetailStatus';
 import { mockContent, mockTrending } from './data/mockData';
 import { useFavorites } from './hooks/useFavorites';
+import { useCollections } from './hooks/useCollections';
 import { useTrending } from './hooks/useTrending';
 import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
@@ -76,6 +77,7 @@ export default function App() {
   const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
   const favorites = useFavorites();
   const { isFavorite, toggleFavorite, savedMedia } = favorites;
+  const collectionsState = useCollections();
   const trending = useTrending(!USE_MOCK);
 
   // --- search ---
@@ -292,6 +294,15 @@ export default function App() {
           }
         : undefined,
       onDismiss: favorites.dismissNotice,
+    });
+  }
+  if (collectionsState.saveError) {
+    accountNotices.push({
+      id: 'collections',
+      message: collectionsState.saveError,
+      tone: 'error',
+      action: collectionsState.status === 'ready' ? { label: 'Try again', onClick: collectionsState.retrySave } : undefined,
+      onDismiss: collectionsState.dismissSaveError,
     });
   }
 
@@ -528,6 +539,9 @@ export default function App() {
               item={detail}
               favorite={isFavorite(detail.id)}
               onToggleFavorite={toggleFavorite}
+              collections={collectionsState.collectionsFor(detail.type)}
+              collectionIds={collectionsState.assignments[detail.id] ?? []}
+              onToggleCollection={(collectionId) => collectionsState.toggleCollection(detail, collectionId)}
               onSearchTerm={(searchQuery) => {
                 setQuery(searchQuery);
                 setSelectedId(null);
