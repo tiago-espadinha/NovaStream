@@ -232,6 +232,25 @@
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+  .field-label {
+    margin-bottom: calc(-1 * var(--space-2));
+    color: var(--color-text);
+    font-size: var(--font-size-small);
+    font-weight: 600;
+  }
+  .field-success {
+    color: var(--color-success);
+  }
+  .field-success::before {
+    content: '✓ ';
+  }
+  .btn-danger {
+    background: var(--color-danger);
+    color: var(--color-on-primary);
+  }
+  .btn-danger:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
   .meta-label {
     display: block;
     margin: 0 0 var(--space-1);
