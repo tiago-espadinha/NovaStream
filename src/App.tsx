@@ -5,8 +5,10 @@ import { MediaDetail } from './components/MediaDetail';
 import { LoginModal } from './components/LoginModal';
 import { AccountNotices, type AccountNotice } from './components/AccountNotices';
 import { DetailStatus } from './components/DetailStatus';
+import { SavedPage } from './components/SavedPage';
 import { mockContent, mockTrending } from './data/mockData';
 import { useFavorites } from './hooks/useFavorites';
+import { useCollections } from './hooks/useCollections';
 import { useTrending } from './hooks/useTrending';
 import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
@@ -73,10 +75,17 @@ export default function App() {
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
 
-  const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
+  const { user, status: sessionStatus, logout, refreshUser, sessionNotice, clearSessionNotice } = useAuth();
   const favorites = useFavorites();
   const { isFavorite, toggleFavorite, savedMedia } = favorites;
+  const collectionsState = useCollections();
   const trending = useTrending(!USE_MOCK);
+  const isSavedPage = window.location.pathname.replace(/\/$/, '') === '/saved';
+
+  // Tabs, history, and screen readers name the page by its title.
+  useEffect(() => {
+    document.title = isSavedPage ? 'Saved · Nova Stream' : 'Nova Stream';
+  }, [isSavedPage]);
 
   // --- search ---
   useEffect(() => {
@@ -261,6 +270,10 @@ export default function App() {
   const selectedTitle = [...liveResults, ...savedMedia].find((item) => item.id === selectedId)?.title;
   const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
 
+  // The Saved page needs both lists: it's only ready when both are, and an error in either is an error.
+  const savedStatuses = [favorites.status, collectionsState.status];
+  const savedStatus = savedStatuses.includes('error') ? 'error' : savedStatuses.includes('loading') ? 'loading' : 'ready';
+
   const accountNotices: AccountNotice[] = [];
   if (sessionNotice) {
     accountNotices.push({
@@ -294,6 +307,15 @@ export default function App() {
       onDismiss: favorites.dismissNotice,
     });
   }
+  if (collectionsState.saveError) {
+    accountNotices.push({
+      id: 'collections',
+      message: collectionsState.saveError,
+      tone: 'error',
+      action: collectionsState.status === 'ready' ? { label: 'Try again', onClick: collectionsState.retrySave } : undefined,
+      onDismiss: collectionsState.dismissSaveError,
+    });
+  }
 
   return (
     <>
@@ -306,8 +328,34 @@ export default function App() {
         sessionStatus={sessionStatus}
         onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={logout}
+        savedPage={isSavedPage}
       />
 
+      {isSavedPage ? (
+        <main>
+          <AccountNotices notices={accountNotices} />
+          <SavedPage
+            status={savedStatus}
+            signedIn={sessionStatus !== 'signedOut'}
+            onRetry={() => {
+              if (favorites.status === 'error') favorites.retryLoad();
+              if (collectionsState.status === 'error') collectionsState.retryLoad();
+              if (sessionStatus === 'unreachable') refreshUser();
+            }}
+            onSignIn={() => setAuthModalOpen(true)}
+            favoriteItems={savedMedia}
+            collectionItems={collectionsState.collectionItems}
+            isFavorite={isFavorite}
+            onToggleFavorite={toggleFavorite}
+            onSelect={setSelectedId}
+            collections={collectionsState.collections}
+            assignments={collectionsState.assignments}
+            onCreateCollection={collectionsState.createCollection}
+            deleteCollection={collectionsState.deleteCollection}
+            toggleCollection={collectionsState.toggleCollection}
+          />
+        </main>
+      ) : (
       <main>
         <AccountNotices notices={accountNotices} />
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
@@ -510,6 +558,7 @@ export default function App() {
           />
         )}
       </main>
+      )}
 
       <footer className="site-footer">Nova Stream — a React + TypeScript frontend with a real API-backed server.</footer>
 
@@ -528,6 +577,12 @@ export default function App() {
               item={detail}
               favorite={isFavorite(detail.id)}
               onToggleFavorite={toggleFavorite}
+              collections={collectionsState.collectionsFor(detail.type)}
+              allCollections={collectionsState.collections}
+              collectionIds={collectionsState.assignments[detail.id] ?? []}
+              collectionsReady={collectionsState.status === 'ready'}
+              onToggleCollection={(collectionId) => collectionsState.toggleCollection(detail, collectionId)}
+              onCreateCollection={(name, contentTypes) => collectionsState.createCollection(name, contentTypes, detail)}
               onSearchTerm={(searchQuery) => {
                 setQuery(searchQuery);
                 setSelectedId(null);

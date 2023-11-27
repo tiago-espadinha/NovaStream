@@ -84,3 +84,59 @@ export function parsePreferences(body) {
   }
   return { value: patch };
 }
+
+// Mirrors BUILT_IN_COLLECTIONS in src/hooks/useCollections.ts; the server only needs the ids.
+export const BUILT_IN_COLLECTION_IDS = [
+  'to-watch', 'watched', 'to-read', 'read', 'to-listen', 'listened', 'to-play', 'playing', 'played',
+];
+export const MAX_CUSTOM_COLLECTIONS = 50;
+const MAX_COLLECTION_NAME = 32;
+const CUSTOM_ID_PATTERN = /^custom-[\w-]{1,80}$/;
+
+function parseCustomCollections(raw) {
+  if (!Array.isArray(raw)) return [];
+  const seenIds = new Set();
+  const seenNames = new Set();
+  const custom = [];
+  for (const entry of raw) {
+    const name = isString(entry?.name) ? entry.name.trim() : '';
+    const contentTypes = Array.isArray(entry?.contentTypes)
+      ? [...new Set(entry.contentTypes.filter((type) => MEDIA_TYPES.includes(type)))]
+      : [];
+    const valid = isString(entry?.id) && CUSTOM_ID_PATTERN.test(entry.id) && name && name.length <= MAX_COLLECTION_NAME;
+    if (!valid || !contentTypes.length || seenIds.has(entry.id) || seenNames.has(name.toLowerCase())) continue;
+    seenIds.add(entry.id);
+    seenNames.add(name.toLowerCase());
+    custom.push({ id: entry.id, name, contentTypes });
+    if (custom.length === MAX_CUSTOM_COLLECTIONS) break;
+  }
+  return custom;
+}
+
+/**
+ * A user's whole collections document. Entries that don't fit are dropped rather than
+ * rejected, so one stale item can't block saving everything else; an assignment is kept
+ * only when it names known collections and comes with a valid snapshot of its title.
+ */
+export function parseCollections(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return { error: 'Collections must be an object.' };
+  const custom = parseCustomCollections(body.custom);
+  const knownIds = new Set([...BUILT_IN_COLLECTION_IDS, ...custom.map(({ id }) => id)]);
+  const rawAssignments = body.assignments && typeof body.assignments === 'object' ? body.assignments : {};
+  const rawMedia = body.media && typeof body.media === 'object' ? body.media : {};
+
+  const assignments = {};
+  const media = {};
+  let kept = 0;
+  for (const [itemId, ids] of Object.entries(rawAssignments)) {
+    // Invalid entries are skipped first, so they never count toward the limit.
+    const collectionIds = Array.isArray(ids) ? [...new Set(ids.filter((id) => knownIds.has(id)))] : [];
+    const snapshot = parseMediaSnapshot(rawMedia[itemId]).value;
+    if (!collectionIds.length || snapshot?.id !== itemId) continue;
+    assignments[itemId] = collectionIds;
+    media[itemId] = snapshot;
+    kept += 1;
+    if (kept === MAX_SAVED_MEDIA) break;
+  }
+  return { value: { custom, assignments, media } };
+}
