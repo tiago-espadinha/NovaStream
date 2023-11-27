@@ -10,11 +10,23 @@ interface ContentCardProps {
   favorite: boolean;
   onToggleFavorite: (item: MediaSummary) => void;
   onSelect: (id: string) => void;
+  collectionIds?: string[];
+  collectionOptions?: Array<{ id: string; name: string }>;
+  onToggleCollection?: (id: string) => void;
   /** Card titles sit one level below the section that lists them. */
   headingLevel?: 3 | 4;
 }
 
-export function ContentCard({ item, favorite, onToggleFavorite, onSelect, headingLevel = 3 }: ContentCardProps) {
+export function ContentCard({
+  item,
+  favorite,
+  onToggleFavorite,
+  onSelect,
+  collectionIds = [],
+  collectionOptions,
+  onToggleCollection,
+  headingLevel = 3,
+}: ContentCardProps) {
   const Title = headingLevel === 4 ? 'h4' : 'h3';
   return (
     <article className="card">
@@ -54,6 +66,23 @@ export function ContentCard({ item, favorite, onToggleFavorite, onSelect, headin
           secondaryColor="var(--color-text)"
         />
       </button>
+      {collectionOptions && onToggleCollection && collectionOptions.length > 0 && (
+        <details className="card-collection">
+          <summary>Collections{collectionIds.length > 0 ? ` · ${collectionIds.length}` : ''}</summary>
+          <div className="card-collection-options">
+            {collectionOptions.map((collection) => (
+              <label key={collection.id}>
+                <input
+                  type="checkbox"
+                  checked={collectionIds.includes(collection.id)}
+                  onChange={() => onToggleCollection(collection.id)}
+                />
+                <span>{collection.name}</span>
+              </label>
+            ))}
+          </div>
+        </details>
+      )}
     </article>
   );
 }

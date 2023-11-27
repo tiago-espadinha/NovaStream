@@ -19,6 +19,7 @@ interface HeaderProps {
   sessionStatus: SessionStatus;
   onOpenAuth: () => void;
   onLogout: () => void;
+  savedPage?: boolean;
 }
 
 export function Header({
@@ -30,11 +31,13 @@ export function Header({
   sessionStatus,
   onOpenAuth,
   onLogout,
+  savedPage = false,
 }: HeaderProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const keywordKind = parseContentQuery(query).kind;
 
   useEffect(() => {
+    if (savedPage) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (!isSearchShortcut(event, isMac) || isDialogOpen()) return;
       event.preventDefault();
@@ -43,7 +46,7 @@ export function Header({
     };
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [savedPage]);
 
   return (
     <header className="site-header">
@@ -51,56 +54,65 @@ export function Header({
         <a className="logo" href="/">
           NOVA<span>stream</span>
         </a>
-        <form className="search" role="search" onSubmit={(e) => e.preventDefault()}>
-          <label htmlFor="site-search" className="visually-hidden">
-            Search titles, genres, or tags
-          </label>
-          <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" />
-            <path d="m20 20-4-4" />
-          </svg>
-          <input
-            ref={searchRef}
-            id="site-search"
-            type="search"
-            aria-keyshortcuts={shortcut.aria}
-            aria-describedby={keywordKind === 'text' ? undefined : 'search-keyword'}
-            placeholder="Search titles, genre: Drama, tag: Indie…"
-            autoComplete="off"
-            maxLength={200}
-            value={query}
-            onChange={(e) => onQueryChange(e.target.value)}
-          />
-          {!query && (
-            <kbd className="search-hint" aria-hidden="true">
-              {shortcut.hint}
-            </kbd>
-          )}
-          {keywordKind !== 'text' && (
-            <>
-              <span className="keyword-kind search-keyword" aria-hidden="true">
-                {keywordKind}
-              </span>
-              <span id="search-keyword" className="visually-hidden">
-                Searching by {keywordKind}
-              </span>
-            </>
-          )}
-          {query && (
-            <button
-              type="button"
-              className="search-clear"
-              aria-label="Clear search"
-              onClick={() => {
-                onQueryChange('');
-                searchRef.current?.focus();
-              }}
-            >
-              <span aria-hidden="true">✕</span>
-            </button>
-          )}
-        </form>
+        {!savedPage && (
+          <form className="search" role="search" onSubmit={(e) => e.preventDefault()}>
+            <label htmlFor="site-search" className="visually-hidden">
+              Search titles, genres, or tags
+            </label>
+            <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-4-4" />
+            </svg>
+            <input
+              ref={searchRef}
+              id="site-search"
+              type="search"
+              aria-keyshortcuts={shortcut.aria}
+              aria-describedby={keywordKind === 'text' ? undefined : 'search-keyword'}
+              placeholder="Search titles, genre: Drama, tag: Indie…"
+              autoComplete="off"
+              maxLength={200}
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+            />
+            {!query && (
+              <kbd className="search-hint" aria-hidden="true">
+                {shortcut.hint}
+              </kbd>
+            )}
+            {keywordKind !== 'text' && (
+              <>
+                <span className="keyword-kind search-keyword" aria-hidden="true">
+                  {keywordKind}
+                </span>
+                <span id="search-keyword" className="visually-hidden">
+                  Searching by {keywordKind}
+                </span>
+              </>
+            )}
+            {query && (
+              <button
+                type="button"
+                className="search-clear"
+                aria-label="Clear search"
+                onClick={() => {
+                  onQueryChange('');
+                  searchRef.current?.focus();
+                }}
+              >
+                <span aria-hidden="true">✕</span>
+              </button>
+            )}
+          </form>
+        )}
         <div className="header-actions">
+          <a
+            className={`saved-link${savedPage ? ' active' : ''}`}
+            href="/saved"
+            aria-current={savedPage ? 'page' : undefined}
+          >
+            Saved
+          </a>
           {sessionStatus === 'checking' ? (
             <button type="button" className="account-button" disabled aria-busy="true">
               Signing in…
@@ -117,9 +129,11 @@ export function Header({
           )}
         </div>
       </div>
-      <div className="header-types">
-        <TypeNav active={activeType} onChange={onTypeChange} />
-      </div>
+      {!savedPage && (
+        <div className="header-types">
+          <TypeNav active={activeType} onChange={onTypeChange} />
+        </div>
+      )}
     </header>
   );
 }

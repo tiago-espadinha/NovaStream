@@ -1,16 +1,8 @@
 import { useDialog } from '../../hooks/useDialog';
 import { CONTENT_TYPE_LABELS, MUSIC_KIND_LABELS, type ContentType, type MusicKind } from '../../types';
 import type { GenreSelection } from '../../utils/contentFilters';
+import { ChipText } from '../../components/ToggleChip/ToggleChip';
 import './FilterDialog.css';
-
-/** The data-label copy reserves the bold width, so selecting a chip doesn't reflow its row. */
-function ChipText({ label }: { label: string }) {
-  return (
-    <span className="choice-chip-text" data-label={label}>
-      {label}
-    </span>
-  );
-}
 
 interface FilterDialogProps {
   showCategories: boolean;

@@ -5,8 +5,10 @@ import { MediaDetail } from './screens/detail/MediaDetail';
 import { LoginModal } from './screens/account/LoginModal';
 import { AccountNotices, type AccountNotice } from './components/AccountNotices/AccountNotices';
 import { DetailStatus } from './screens/detail/DetailStatus';
+import { SavedPage } from './screens/saved/SavedPage';
 import { mockContent, mockTrending } from './data/mockData';
 import { useFavorites } from './hooks/useFavorites';
+import { useCollections } from './hooks/useCollections';
 import { useTrending } from './hooks/useTrending';
 import { useAuth } from './context/AuthContext';
 import * as api from './services/apiService';
@@ -77,10 +79,17 @@ export default function App() {
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
 
-  const { user, status: sessionStatus, logout, sessionNotice, clearSessionNotice } = useAuth();
+  const { user, status: sessionStatus, logout, refreshUser, sessionNotice, clearSessionNotice } = useAuth();
   const favorites = useFavorites();
   const { isFavorite, toggleFavorite, savedMedia } = favorites;
+  const collectionsState = useCollections();
   const trending = useTrending(!USE_MOCK);
+  const isSavedPage = window.location.pathname.replace(/\/$/, '') === '/saved';
+
+  // Tabs, history, and screen readers name the page by its title.
+  useEffect(() => {
+    document.title = isSavedPage ? 'Saved · Nova Stream' : 'Nova Stream';
+  }, [isSavedPage]);
 
   // --- search ---
   useEffect(() => {
@@ -263,6 +272,14 @@ export default function App() {
   const selectedTitle = [...liveResults, ...savedMedia].find((item) => item.id === selectedId)?.title;
   const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
 
+  // The Saved page needs both lists: it's only ready when both are, and an error in either is an error.
+  const savedStatuses = [favorites.status, collectionsState.status];
+  const savedStatus = savedStatuses.includes('error')
+    ? 'error'
+    : savedStatuses.includes('loading')
+      ? 'loading'
+      : 'ready';
+
   const accountNotices: AccountNotice[] = [];
   if (sessionNotice) {
     accountNotices.push({
@@ -296,6 +313,16 @@ export default function App() {
       onDismiss: favorites.dismissNotice,
     });
   }
+  if (collectionsState.saveError) {
+    accountNotices.push({
+      id: 'collections',
+      message: collectionsState.saveError,
+      tone: 'error',
+      action:
+        collectionsState.status === 'ready' ? { label: 'Try again', onClick: collectionsState.retrySave } : undefined,
+      onDismiss: collectionsState.dismissSaveError,
+    });
+  }
 
   return (
     <>
@@ -308,208 +335,235 @@ export default function App() {
         sessionStatus={sessionStatus}
         onOpenAuth={() => setAuthModalOpen(true)}
         onLogout={logout}
+        savedPage={isSavedPage}
       />
 
-      <main>
-        <AccountNotices notices={accountNotices} />
-        <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
-        {spotlight && (
-          <Spotlight
-            item={spotlight}
-            favorite={isFavorite(spotlight.id)}
-            onToggleFavorite={toggleFavorite}
-            onExplore={setSelectedId}
-          />
-        )}
-        {awaitingLiveQuery && (
-          <section className="intro" aria-labelledby="intro-title">
-            <p className="eyebrow">Live discovery</p>
-            <h2 id="intro-title">Find your next obsession.</h2>
-            <p>
-              Search across movies, shows, music, books and games. Results come from live TMDb, Last.fm, Open Library,
-              and RAWG data.
-            </p>
-          </section>
-        )}
-
-        {favoritesShelf.length > 0 && (
-          <Shelf
-            id="shelf-favorites"
-            level={2}
-            title="Your favorites"
-            items={favoritesShelf}
+      {isSavedPage ? (
+        <main>
+          <AccountNotices notices={accountNotices} />
+          <SavedPage
+            status={savedStatus}
+            signedIn={sessionStatus !== 'signedOut'}
+            onRetry={() => {
+              if (favorites.status === 'error') favorites.retryLoad();
+              if (collectionsState.status === 'error') collectionsState.retryLoad();
+              if (sessionStatus === 'unreachable') refreshUser();
+            }}
+            onSignIn={() => setAuthModalOpen(true)}
+            favoriteItems={savedMedia}
+            collectionItems={collectionsState.collectionItems}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             onSelect={setSelectedId}
-            endAction={
-              <a className="shelf-see-all" href="/saved">
-                <span>See all in Saved</span>
-                <span className="shelf-see-all-count">
-                  {savedMedia.length} {savedMedia.length === 1 ? 'favorite' : 'favorites'}
-                </span>
-              </a>
-            }
+            collections={collectionsState.collections}
+            assignments={collectionsState.assignments}
+            onCreateCollection={collectionsState.createCollection}
+            deleteCollection={collectionsState.deleteCollection}
+            toggleCollection={collectionsState.toggleCollection}
           />
-        )}
-        {showTrending && (
-          <Shelf
-            id="shelf-trending"
-            level={2}
-            title="Trending this week"
-            items={trendingItems}
-            isFavorite={isFavorite}
-            onToggleFavorite={toggleFavorite}
-            onSelect={setSelectedId}
-            notice={
-              trending.loading ? (
-                <Spinner label="Loading what’s trending…" />
-              ) : (
-                trending.problem && (
-                  <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
-                    <p role="status">{trending.problem.message}</p>
-                    {trending.problem.retryable && (
-                      <button type="button" className="btn btn-ghost" onClick={trending.retry}>
-                        Try again
-                      </button>
-                    )}
-                  </div>
-                )
-              )
-            }
-          />
-        )}
-
-        <section className="results" aria-labelledby="results-title">
-          <div className="results-head">
-            <div>
-              <h2 id="results-title">{resultsHeading}</h2>
-              <p className="results-count" aria-live="polite">
-                {!awaitingLiveQuery &&
-                  !liveLoading &&
-                  !searchFailed &&
-                  `${displayedItems.length} ${displayedItems.length === 1 ? 'title' : 'titles'}`}
+        </main>
+      ) : (
+        <main>
+          <AccountNotices notices={accountNotices} />
+          <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
+          {spotlight && (
+            <Spotlight
+              item={spotlight}
+              favorite={isFavorite(spotlight.id)}
+              onToggleFavorite={toggleFavorite}
+              onExplore={setSelectedId}
+            />
+          )}
+          {awaitingLiveQuery && (
+            <section className="intro" aria-labelledby="intro-title">
+              <p className="eyebrow">Live discovery</p>
+              <h2 id="intro-title">Find your next obsession.</h2>
+              <p>
+                Search across movies, shows, music, books and games. Results come from live TMDb, Last.fm, Open Library,
+                and RAWG data.
               </p>
-            </div>
-            {!awaitingLiveQuery && !searchFailed && (
-              <div className="results-toolbar">
-                <label className="sort-field">
-                  <span>Sort</span>
-                  <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
-                    <option value="featured">{trimmedQuery ? 'Best match' : 'Featured'}</option>
-                    <option value="rating">Top rated</option>
-                    <option value="newest">Newest</option>
-                    <option value="title">A–Z</option>
-                  </select>
-                </label>
-                <button
-                  type="button"
-                  className="btn btn-ghost"
-                  aria-haspopup="dialog"
-                  onClick={() => setShowFilters(true)}
-                >
-                  Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
-                </button>
-              </div>
-            )}
-          </div>
-
-          {liveError && (
-            <div className={`notice ${searchFailed ? 'notice-error' : 'notice-warning'}`}>
-              {/* A partial outage is informational; only a failed search interrupts screen readers. */}
-              <p role={searchFailed ? 'alert' : 'status'}>{liveError.message}</p>
-              {liveError.retryable && (
-                <button type="button" className="btn btn-ghost" onClick={() => setSearchAttempt((n) => n + 1)}>
-                  Try again
-                </button>
-              )}
-            </div>
+            </section>
           )}
 
-          {awaitingLiveQuery ? (
-            <p className="empty-state">
-              Type in the search box above to query the live databases (movies, TV, music, books, games).
-            </p>
-          ) : liveLoading ? (
-            <Spinner label="Searching live databases…" />
-          ) : searchFailed ? (
-            <div className="empty-state">
-              <div className="empty-actions">
-                <button type="button" className="btn btn-ghost" onClick={() => setQuery('')}>
-                  Clear search
-                </button>
+          {favoritesShelf.length > 0 && (
+            <Shelf
+              id="shelf-favorites"
+              level={2}
+              title="Your favorites"
+              items={favoritesShelf}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onSelect={setSelectedId}
+              endAction={
+                <a className="shelf-see-all" href="/saved">
+                  <span>See all in Saved</span>
+                  <span className="shelf-see-all-count">
+                    {savedMedia.length} {savedMedia.length === 1 ? 'favorite' : 'favorites'}
+                  </span>
+                </a>
+              }
+            />
+          )}
+          {showTrending && (
+            <Shelf
+              id="shelf-trending"
+              level={2}
+              title="Trending this week"
+              items={trendingItems}
+              isFavorite={isFavorite}
+              onToggleFavorite={toggleFavorite}
+              onSelect={setSelectedId}
+              notice={
+                trending.loading ? (
+                  <Spinner label="Loading what’s trending…" />
+                ) : (
+                  trending.problem && (
+                    <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
+                      <p role="status">{trending.problem.message}</p>
+                      {trending.problem.retryable && (
+                        <button type="button" className="btn btn-ghost" onClick={trending.retry}>
+                          Try again
+                        </button>
+                      )}
+                    </div>
+                  )
+                )
+              }
+            />
+          )}
+
+          <section className="results" aria-labelledby="results-title">
+            <div className="results-head">
+              <div>
+                <h2 id="results-title">{resultsHeading}</h2>
+                <p className="results-count" aria-live="polite">
+                  {!awaitingLiveQuery &&
+                    !liveLoading &&
+                    !searchFailed &&
+                    `${displayedItems.length} ${displayedItems.length === 1 ? 'title' : 'titles'}`}
+                </p>
               </div>
+              {!awaitingLiveQuery && !searchFailed && (
+                <div className="results-toolbar">
+                  <label className="sort-field">
+                    <span>Sort</span>
+                    <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
+                      <option value="featured">{trimmedQuery ? 'Best match' : 'Featured'}</option>
+                      <option value="rating">Top rated</option>
+                      <option value="newest">Newest</option>
+                      <option value="title">A–Z</option>
+                    </select>
+                  </label>
+                  <button
+                    type="button"
+                    className="btn btn-ghost"
+                    aria-haspopup="dialog"
+                    onClick={() => setShowFilters(true)}
+                  >
+                    Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+                  </button>
+                </div>
+              )}
             </div>
-          ) : displayedItems.length === 0 ? (
-            <div className="empty-state">
-              <p>{trimmedQuery ? `No matches for “${trimmedQuery}”.` : 'No titles match these filters.'}</p>
-              <div className="empty-actions">
-                {trimmedQuery && (
+
+            {liveError && (
+              <div className={`notice ${searchFailed ? 'notice-error' : 'notice-warning'}`}>
+                {/* A partial outage is informational; only a failed search interrupts screen readers. */}
+                <p role={searchFailed ? 'alert' : 'status'}>{liveError.message}</p>
+                {liveError.retryable && (
+                  <button type="button" className="btn btn-ghost" onClick={() => setSearchAttempt((n) => n + 1)}>
+                    Try again
+                  </button>
+                )}
+              </div>
+            )}
+
+            {awaitingLiveQuery ? (
+              <p className="empty-state">
+                Type in the search box above to query the live databases (movies, TV, music, books, games).
+              </p>
+            ) : liveLoading ? (
+              <Spinner label="Searching live databases…" />
+            ) : searchFailed ? (
+              <div className="empty-state">
+                <div className="empty-actions">
                   <button type="button" className="btn btn-ghost" onClick={() => setQuery('')}>
                     Clear search
                   </button>
-                )}
-                {activeFilterCount > 0 && (
-                  <button type="button" className="btn btn-ghost" onClick={resetFilters}>
-                    Reset filters
-                  </button>
-                )}
+                </div>
               </div>
-            </div>
-          ) : showShelves ? (
-            <>
-              <Shelf
-                id="shelf-mix"
-                title="Tonight’s mix"
-                items={mixedShelf}
-                isFavorite={isFavorite}
-                onToggleFavorite={toggleFavorite}
-                onSelect={setSelectedId}
-              />
-              {typeShelves.map(({ type, items }) => (
+            ) : displayedItems.length === 0 ? (
+              <div className="empty-state">
+                <p>{trimmedQuery ? `No matches for “${trimmedQuery}”.` : 'No titles match these filters.'}</p>
+                <div className="empty-actions">
+                  {trimmedQuery && (
+                    <button type="button" className="btn btn-ghost" onClick={() => setQuery('')}>
+                      Clear search
+                    </button>
+                  )}
+                  {activeFilterCount > 0 && (
+                    <button type="button" className="btn btn-ghost" onClick={resetFilters}>
+                      Reset filters
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : showShelves ? (
+              <>
                 <Shelf
-                  key={type}
-                  id={`shelf-${type}`}
-                  title={CONTENT_TYPE_LABELS[type]}
-                  items={items}
+                  id="shelf-mix"
+                  title="Tonight’s mix"
+                  items={mixedShelf}
                   isFavorite={isFavorite}
                   onToggleFavorite={toggleFavorite}
                   onSelect={setSelectedId}
                 />
-              ))}
-            </>
-          ) : (
-            <ContentGrid
-              items={shelfItems}
-              isFavorite={isFavorite}
-              onToggleFavorite={toggleFavorite}
-              onSelect={setSelectedId}
+                {typeShelves.map(({ type, items }) => (
+                  <Shelf
+                    key={type}
+                    id={`shelf-${type}`}
+                    title={CONTENT_TYPE_LABELS[type]}
+                    items={items}
+                    isFavorite={isFavorite}
+                    onToggleFavorite={toggleFavorite}
+                    onSelect={setSelectedId}
+                  />
+                ))}
+              </>
+            ) : (
+              <ContentGrid
+                items={shelfItems}
+                isFavorite={isFavorite}
+                onToggleFavorite={toggleFavorite}
+                onSelect={setSelectedId}
+              />
+            )}
+          </section>
+
+          {showFilters && (
+            <FilterDialog
+              showCategories={activeType === 'all'}
+              selectedCategories={selectedCategories}
+              onToggleCategory={toggleCategory}
+              genreGroups={genreGroups}
+              selectedGenres={selectedGenres}
+              onToggleGenre={toggleGenre}
+              showMusicKind={activeCategories.includes('music')}
+              musicKind={musicKind}
+              onMusicKindChange={setMusicKind}
+              showRating={activeCategories.some((type) => type !== 'music')}
+              minRating={minRating}
+              onMinRatingChange={setMinRating}
+              showPlays={activeCategories.includes('music')}
+              minPlays={minPlays}
+              playsRange={playsRange}
+              onMinPlaysChange={setMinPlays}
+              onReset={resetFilters}
+              onClose={() => setShowFilters(false)}
             />
           )}
-        </section>
-
-        {showFilters && (
-          <FilterDialog
-            showCategories={activeType === 'all'}
-            selectedCategories={selectedCategories}
-            onToggleCategory={toggleCategory}
-            genreGroups={genreGroups}
-            selectedGenres={selectedGenres}
-            onToggleGenre={toggleGenre}
-            showMusicKind={activeCategories.includes('music')}
-            musicKind={musicKind}
-            onMusicKindChange={setMusicKind}
-            showRating={activeCategories.some((type) => type !== 'music')}
-            minRating={minRating}
-            onMinRatingChange={setMinRating}
-            showPlays={activeCategories.includes('music')}
-            minPlays={minPlays}
-            playsRange={playsRange}
-            onMinPlaysChange={setMinPlays}
-            onReset={resetFilters}
-            onClose={() => setShowFilters(false)}
-          />
-        )}
-      </main>
+        </main>
+      )}
 
       <footer className="site-footer">
         Nova Stream — a React + TypeScript frontend with a real API-backed server.
@@ -530,6 +584,12 @@ export default function App() {
               item={detail}
               favorite={isFavorite(detail.id)}
               onToggleFavorite={toggleFavorite}
+              collections={collectionsState.collectionsFor(detail.type)}
+              allCollections={collectionsState.collections}
+              collectionIds={collectionsState.assignments[detail.id] ?? []}
+              collectionsReady={collectionsState.status === 'ready'}
+              onToggleCollection={(collectionId) => collectionsState.toggleCollection(detail, collectionId)}
+              onCreateCollection={(name, contentTypes) => collectionsState.createCollection(name, contentTypes, detail)}
               onSearchTerm={(searchQuery) => {
                 setQuery(searchQuery);
                 setSelectedId(null);

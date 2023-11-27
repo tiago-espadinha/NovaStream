@@ -131,6 +131,20 @@
     align-items: center;
     gap: var(--space-4);
   }
+  .saved-link {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-control);
+    font-weight: 600;
+    text-decoration: none;
+    padding: var(--space-2) 0;
+  }
+  .saved-link:hover,
+  .saved-link.active {
+    color: var(--color-text);
+  }
+  .saved-link.active {
+    box-shadow: inset 0 -2px var(--color-primary);
+  }
   .account-button {
     min-height: 40px;
     padding: var(--space-2) var(--space-4);

@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useDialog } from '../../hooks/useDialog';
-import type { ContentItem } from '../../types';
+import type { ContentItem, ContentType } from '../../types';
+import type { SavedCollection } from '../../utils/collections';
 import { mediaTypeLabel } from '../../utils/discovery';
 import { fallbackArtwork } from '../../utils/gradient';
 import { ScoreBadge } from '../../components/ScoreBadge/ScoreBadge';
 import HeartIcon from '../../components/HeartIcon/HeartIcon';
+import { CollectionMenu } from './CollectionMenu';
 import { ArtworkViewer } from './ArtworkViewer';
 import './MediaDetail.css';
 
@@ -12,11 +14,29 @@ interface MediaDetailProps {
   item: ContentItem;
   favorite: boolean;
   onToggleFavorite: (item: ContentItem) => void;
+  collections: SavedCollection[];
+  allCollections: SavedCollection[];
+  collectionIds: string[];
+  collectionsReady: boolean;
+  onToggleCollection: (collectionId: string) => void;
+  onCreateCollection: (name: string, contentTypes: ContentType[]) => SavedCollection | null;
   onSearchTerm: (query: string) => void;
   onClose: () => void;
 }
 
-export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, onClose }: MediaDetailProps) {
+export function MediaDetail({
+  item,
+  favorite,
+  onToggleFavorite,
+  collections,
+  allCollections,
+  collectionIds,
+  collectionsReady,
+  onToggleCollection,
+  onCreateCollection,
+  onSearchTerm,
+  onClose,
+}: MediaDetailProps) {
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [viewingArtwork, setViewingArtwork] = useState(false);
   const streamingPlatforms = item.platforms
@@ -84,6 +104,17 @@ export function MediaDetail({ item, favorite, onToggleFavorite, onSearchTerm, on
                 </span>
                 {favorite ? 'Saved to favorites' : 'Save to favorites'}
               </button>
+              {collections.length > 0 && (
+                <CollectionMenu
+                  itemType={item.type}
+                  collections={collections}
+                  allCollections={allCollections}
+                  collectionIds={collectionIds}
+                  ready={collectionsReady}
+                  onToggleCollection={onToggleCollection}
+                  onCreateCollection={onCreateCollection}
+                />
+              )}
             </div>
           </div>
         </div>
