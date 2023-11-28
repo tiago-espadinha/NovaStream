@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node --watch src/index.js",
+    "dev:inspect": "node --inspect --experimental-network-inspection --watch src/index.js",
     "start": "node src/index.js",
     "test": "node --test 'src/**/*.node.js'"
   },
