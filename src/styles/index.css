@@ -77,6 +77,17 @@ select {
   transform: none;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Full-height column so the footer rests at the bottom of short pages. */
 #root {
   position: relative;
@@ -333,6 +344,36 @@ nav.types button.active {
     backdrop-filter: blur(8px);
   }
 }
+@media (max-width: 767px) {
+  .header-bar {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "logo actions"
+      "search search";
+    gap: var(--space-3);
+  }
+  .header-actions {
+    justify-self: end;
+    gap: var(--space-3);
+  }
+  .search {
+    max-width: none;
+  }
+  .header-types {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  nav.types {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: var(--space-1) 0;
+  }
+  nav.types button {
+    padding-inline: var(--space-2);
+    font-size: var(--font-size-small);
+  }
+}
+
 main {
   flex: 1 0 auto;
   width: 100%;
@@ -1060,6 +1101,44 @@ main:focus {
   accent-color: var(--color-secondary);
 }
 
+@media (max-width: 767px) {
+  .spotlight {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-5);
+  }
+  .spotlight-art {
+    order: 0;
+    justify-self: start;
+    width: min(46%, 180px);
+  }
+  .spotlight-actions .btn {
+    flex: 1 1 auto;
+  }
+  .results-head {
+    align-items: flex-start;
+  }
+  .dialog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .dialog-panel {
+    max-height: calc(100dvh - var(--space-6));
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .dialog-header,
+  .filter-body,
+  .confirm-delete-body,
+  .dialog-actions {
+    padding-inline: var(--space-4);
+  }
+  .dialog-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+
 .saved-page {
   padding-bottom: var(--space-6);
 }
@@ -1242,6 +1321,38 @@ main:focus {
   border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius-card);
 }
+
+@media (max-width: 767px) {
+  .saved-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "collections"
+      "results"
+      "create";
+    gap: var(--space-6);
+  }
+  .collection-list {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    padding-right: var(--space-8);
+    -webkit-mask-image: var(--mask-scroll-edge);
+    mask-image: var(--mask-scroll-edge);
+  }
+  .collection-link {
+    flex: 0 0 auto;
+    width: auto;
+    border-color: var(--color-border);
+    border-radius: var(--radius-pill);
+  }
+  .collection-link.active {
+    box-shadow: none;
+    border-color: var(--color-primary);
+  }
+}
+
 
 .site-footer {
   padding: var(--space-6) var(--layout-gutter) calc(var(--space-6) + env(safe-area-inset-bottom, 0px) + var(--notice-space, 0px));
@@ -1701,6 +1812,55 @@ main:focus {
 }
 .auth-switch:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 767px) {
+  .detail-backdrop {
+    padding: 0;
+    /* Not stretch: a stretched panel is capped at the screen height and long content spills
+       past its background. min-height below still fills the screen. */
+    align-items: flex-start;
+  }
+  .detail-panel {
+    min-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
+  }
+  .detail-hero {
+    border-radius: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    padding: calc(var(--space-16) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-6);
+  }
+  .detail-art {
+    width: min(44%, 160px);
+  }
+  .detail-actions {
+    flex-wrap: nowrap;
+  }
+  .detail-save {
+    flex: 1 1 auto;
+  }
+  .collection-trigger {
+    padding-inline: var(--space-3);
+  }
+  .collection-trigger-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .detail-body {
+    padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+  }
+  .auth-panel {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-6));
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+  }
 }
 
 .loader {
