@@ -171,4 +171,38 @@
     background: var(--color-bg-alt);
     font-size: var(--font-size-small);
   }
+  @media (max-width: 767px) {
+    .detail-backdrop {
+      padding: 0;
+      /* Not stretch: a stretched panel is capped at the screen height and long content spills
+       past its background. min-height below still fills the screen. */
+      align-items: flex-start;
+    }
+    .detail-panel {
+      min-height: 100dvh;
+      margin: 0;
+      border-radius: 0;
+      border: 0;
+    }
+    .detail-hero {
+      border-radius: 0;
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-5);
+      padding: calc(var(--space-16) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-6);
+    }
+    .detail-art {
+      width: min(44%, 160px);
+    }
+    .detail-actions {
+      flex-wrap: nowrap;
+    }
+    .detail-save {
+      flex: 1 1 auto;
+    }
+  }
+  @media (max-width: 767px) {
+    .detail-body {
+      padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+    }
+  }
 }

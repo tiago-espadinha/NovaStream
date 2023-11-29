@@ -44,6 +44,16 @@
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   /* Full-height column so the footer rests at the bottom of short pages. */
   #root {
     position: relative;

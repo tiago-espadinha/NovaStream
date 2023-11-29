@@ -65,4 +65,19 @@
     flex-wrap: wrap;
     gap: var(--space-3);
   }
+  @media (max-width: 767px) {
+    .spotlight {
+      grid-template-columns: minmax(0, 1fr);
+      gap: var(--space-6);
+      padding: var(--space-6) var(--space-5);
+    }
+    .spotlight-art {
+      order: 0;
+      justify-self: start;
+      width: min(46%, 180px);
+    }
+    .spotlight-actions .btn {
+      flex: 1 1 auto;
+    }
+  }
 }

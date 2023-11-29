@@ -52,6 +52,19 @@
     color: var(--color-secondary);
     font-size: var(--font-size-small);
   }
+  @media (max-width: 767px) {
+    .collection-trigger {
+      padding-inline: var(--space-3);
+    }
+    .collection-trigger-label {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0 0 0 0);
+      white-space: nowrap;
+    }
+  }
   /* new collection, inline in the collections popover */
   .popover-created {
     margin: 0;
