@@ -326,6 +326,9 @@ export default function App() {
 
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <Header
         activeType={activeType}
         onTypeChange={setActiveType}
@@ -339,7 +342,7 @@ export default function App() {
       />
 
       {isSavedPage ? (
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <AccountNotices notices={accountNotices} />
           <SavedPage
             status={savedStatus}
@@ -363,7 +366,7 @@ export default function App() {
           />
         </main>
       ) : (
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <AccountNotices notices={accountNotices} />
           <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
           {spotlight && (
@@ -421,7 +424,15 @@ export default function App() {
                     <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
                       <p role="status">{trending.problem.message}</p>
                       {trending.problem.retryable && (
-                        <button type="button" className="btn btn-ghost" onClick={trending.retry}>
+                        <button
+                          type="button"
+                          className="btn btn-ghost"
+                          onClick={() => {
+                            // The button unmounts while retrying; keep keyboard focus in the shelf.
+                            document.getElementById('shelf-trending-title')?.focus();
+                            trending.retry();
+                          }}
+                        >
                           Try again
                         </button>
                       )}
@@ -435,7 +446,9 @@ export default function App() {
           <section className="results" aria-labelledby="results-title">
             <div className="results-head">
               <div>
-                <h2 id="results-title">{resultsHeading}</h2>
+                <h2 id="results-title" tabIndex={-1} data-focus-fallback>
+                  {resultsHeading}
+                </h2>
                 <p className="results-count" aria-live="polite">
                   {!awaitingLiveQuery &&
                     !liveLoading &&
