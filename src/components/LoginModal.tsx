@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useDialog } from '../hooks/useDialog';
+import { StatusIcon } from './StatusIcon';
 import { validateCredentials, type FieldErrors } from '../utils/authValidation';
 
 interface LoginModalProps {
@@ -86,6 +87,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             />
             {fieldErrors.email && (
               <span id="auth-email-error" className="field-error">
+                <StatusIcon tone="warning" />
                 {fieldErrors.email}
               </span>
             )}
@@ -108,6 +110,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             />
             {fieldErrors.password ? (
               <span id="auth-password-error" className="field-error">
+                <StatusIcon tone="warning" />
                 {fieldErrors.password}
               </span>
             ) : (

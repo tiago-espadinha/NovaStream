@@ -3,6 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent } from "react";
 import type { ContentType } from "../types";
 import type { SavedCollection } from "../utils/collections";
 import { NewCollectionForm } from "./NewCollectionForm";
+import { StatusIcon } from "./StatusIcon";
 import { ToggleChip } from "./ToggleChip";
 
 interface CollectionMenuProps {
@@ -159,9 +160,12 @@ export function CollectionMenu({
               <p className="toggle-group-empty">None cover this format yet.</p>
             )}
             <p className={`popover-created${created ? " field-success" : ""}`} role="status">
-              {created && (created.added
-                ? `Created “${created.name}” and added this title.`
-                : `Created “${created.name}”.`)}
+              {created && (
+                <>
+                  <StatusIcon tone="success" />
+                  {created.added ? `Created “${created.name}” and added this title.` : `Created “${created.name}”.`}
+                </>
+              )}
             </p>
           </fieldset>
           {creating ? (

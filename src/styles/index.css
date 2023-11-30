@@ -603,28 +603,36 @@ main:focus {
 .notice p {
   margin: 0;
 }
+.status-icon {
+  width: 18px;
+  height: 18px;
+  margin-inline-end: 0.4em;
+  vertical-align: -0.3em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .notice-error {
   border-color: var(--color-danger);
   background: var(--color-danger-surface);
 }
-.notice-error p::before {
-  content: "✖ " / "";
+.notice-error .status-icon {
   color: var(--color-danger);
 }
 .notice-warning {
   border-color: var(--color-border-secondary);
   background: var(--color-surface-secondary);
 }
-.notice-warning p::before {
-  content: "⚠ " / "";
+.notice-warning .status-icon {
   color: var(--color-secondary);
 }
 .notice-success {
   border-color: var(--color-success);
   background: var(--color-success-surface);
 }
-.notice-success p::before {
-  content: "✓ " / "";
+.notice-success .status-icon {
   color: var(--color-success);
 }
 .notice-actions {
@@ -1268,9 +1276,6 @@ main:focus {
 .field-success {
   color: var(--color-success);
 }
-.field-success::before {
-  content: "✓ ";
-}
 .new-collection .btn {
   width: 100%;
 }
@@ -1780,9 +1785,6 @@ main:focus {
   color: var(--color-danger);
   font-size: var(--font-size-small);
   font-weight: 500;
-}
-.field-error::before {
-  content: "⚠ " / "";
 }
 .optional,
 .field-hint {
