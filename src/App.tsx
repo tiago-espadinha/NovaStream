@@ -19,6 +19,7 @@ import { Shelf } from './components/Shelf/Shelf';
 import { Spotlight } from './screens/home/Spotlight';
 import { FilterDialog } from './screens/home/FilterDialog';
 import { KeywordChip } from './components/KeywordChip/KeywordChip';
+import { StatusIcon } from './components/StatusIcon/StatusIcon';
 import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
@@ -422,7 +423,10 @@ export default function App() {
                 ) : (
                   trending.problem && (
                     <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
-                      <p role="status">{trending.problem.message}</p>
+                      <p role="status">
+                        <StatusIcon tone={trendingFailed ? 'error' : 'warning'} />
+                        {trending.problem.message}
+                      </p>
                       {trending.problem.retryable && (
                         <button
                           type="button"
@@ -482,7 +486,10 @@ export default function App() {
             {liveError && (
               <div className={`notice ${searchFailed ? 'notice-error' : 'notice-warning'}`}>
                 {/* A partial outage is informational; only a failed search interrupts screen readers. */}
-                <p role={searchFailed ? 'alert' : 'status'}>{liveError.message}</p>
+                <p role={searchFailed ? 'alert' : 'status'}>
+                  <StatusIcon tone={searchFailed ? 'error' : 'warning'} />
+                  {liveError.message}
+                </p>
                 {liveError.retryable && (
                   <button type="button" className="btn btn-ghost" onClick={() => setSearchAttempt((n) => n + 1)}>
                     Try again

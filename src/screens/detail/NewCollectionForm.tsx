@@ -9,6 +9,7 @@ import {
   type SavedCollection,
 } from '../../utils/collections';
 import { CONTENT_TYPES, FormatChips } from '../../components/FormatChips/FormatChips';
+import { StatusIcon } from '../../components/StatusIcon/StatusIcon';
 
 interface NewCollectionFormProps {
   /** The format of the title being organized; the new collection has to cover it. */
@@ -69,6 +70,7 @@ export function NewCollectionForm({ itemType, allCollections, onCreate, onCancel
         aria-describedby={`${id}-status`}
       />
       <p id={`${id}-status`} className={status ? 'field-error' : 'field-hint'} aria-live="polite">
+        {status && <StatusIcon tone="warning" />}
         {status?.message ?? `Up to ${MAX_COLLECTION_NAME} characters.`}
       </p>
       <fieldset className="toggle-group">

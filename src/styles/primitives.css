@@ -134,13 +134,22 @@
     border-color: var(--color-danger);
     background: var(--color-danger-surface);
   }
+  .notice-error .status-icon {
+    color: var(--color-danger);
+  }
   .notice-warning {
     border-color: var(--color-border-secondary);
     background: var(--color-surface-secondary);
   }
+  .notice-warning .status-icon {
+    color: var(--color-secondary);
+  }
   .notice-success {
     border-color: var(--color-success);
     background: var(--color-success-surface);
+  }
+  .notice-success .status-icon {
+    color: var(--color-success);
   }
   .notice-actions {
     display: flex;
@@ -278,9 +287,6 @@
   .field-success {
     color: var(--color-success);
   }
-  .field-success::before {
-    content: '✓ ';
-  }
   .btn-danger {
     background: var(--color-danger);
     color: var(--color-on-primary);
@@ -332,9 +338,6 @@
     color: var(--color-danger);
     font-size: var(--font-size-small);
     font-weight: 500;
-  }
-  .field-error::before {
-    content: '⚠ ' / '';
   }
   .optional,
   .field-hint {

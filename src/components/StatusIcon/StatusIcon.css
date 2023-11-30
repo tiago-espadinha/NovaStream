@@ -1,0 +1,13 @@
+@layer components {
+  .status-icon {
+    width: 18px;
+    height: 18px;
+    margin-inline-end: 0.4em;
+    vertical-align: -0.3em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}

@@ -6,6 +6,7 @@ import { ContentCard } from '../../components/ContentCard/ContentCard';
 import { CONTENT_TYPES, FormatChips } from '../../components/FormatChips/FormatChips';
 import { DeleteCollection } from './DeleteCollection';
 import Spinner from '../../components/Spinner/Spinner';
+import { StatusIcon } from '../../components/StatusIcon/StatusIcon';
 import type { SavedListStatus } from '../../hooks/useFavorites';
 import './SavedPage.css';
 
@@ -66,6 +67,7 @@ export function SavedPage({
   const trimmedName = newCollectionName.trim();
   const problem = newCollectionProblem(newCollectionName, selectedTypes, collections);
   const formProblem = problem?.message ?? null;
+  const formTone = formProblem ? 'warning' : createdName && ready ? 'success' : null;
 
   const createCollection = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -148,7 +150,10 @@ export function SavedPage({
           ) : status === 'error' ? (
             // Never an empty state here: the list may well have titles we couldn't fetch.
             <div className="notice notice-error">
-              <p role="alert">Couldn’t load your saved titles. They’re safe on your account.</p>
+              <p role="alert">
+                <StatusIcon tone="error" />
+                Couldn’t load your saved titles. They’re safe on your account.
+              </p>
               <button type="button" className="btn btn-ghost" onClick={onRetry}>
                 Try again
               </button>
@@ -219,9 +224,10 @@ export function SavedPage({
           </fieldset>
           <p
             id="new-collection-status"
-            className={formProblem ? 'field-error' : createdName && ready ? 'field-success' : 'field-hint'}
+            className={formTone === 'warning' ? 'field-error' : formTone === 'success' ? 'field-success' : 'field-hint'}
             aria-live="polite"
           >
+            {formTone && <StatusIcon tone={formTone} />}
             {!ready
               ? 'Collections are unavailable until your library loads.'
               : (formProblem ??
