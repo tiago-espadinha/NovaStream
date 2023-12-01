@@ -59,6 +59,35 @@ select {
   border: 0;
 }
 
+/* Hidden until focused, then the first thing on screen. */
+.skip-link {
+  position: absolute;
+  top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+  left: var(--space-4);
+  z-index: 40;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-weight: 700;
+  text-decoration: none;
+  transform: translateY(-200%);
+}
+.skip-link:focus {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Full-height column so the footer rests at the bottom of short pages. */
 #root {
   position: relative;
@@ -315,6 +344,36 @@ nav.types button.active {
     backdrop-filter: blur(8px);
   }
 }
+@media (max-width: 767px) {
+  .header-bar {
+    grid-template-columns: auto 1fr;
+    grid-template-areas:
+      "logo actions"
+      "search search";
+    gap: var(--space-3);
+  }
+  .header-actions {
+    justify-self: end;
+    gap: var(--space-3);
+  }
+  .search {
+    max-width: none;
+  }
+  .header-types {
+    flex-wrap: wrap;
+    gap: var(--space-2);
+  }
+  nav.types {
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: var(--space-1) 0;
+  }
+  nav.types button {
+    padding-inline: var(--space-2);
+    font-size: var(--font-size-small);
+  }
+}
+
 main {
   flex: 1 0 auto;
   width: 100%;
@@ -322,6 +381,11 @@ main {
   margin: 0 auto;
   padding: var(--space-6) var(--layout-gutter) var(--space-16);
 }
+/* Focused only by the skip link; a ring around the whole page adds nothing. */
+main:focus {
+  outline: none;
+}
+
 .eyebrow {
   margin: 0 0 var(--space-2);
   color: var(--color-secondary);
@@ -539,28 +603,36 @@ main {
 .notice p {
   margin: 0;
 }
+.status-icon {
+  width: 18px;
+  height: 18px;
+  margin-inline-end: 0.4em;
+  vertical-align: -0.3em;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
 .notice-error {
   border-color: var(--color-danger);
   background: var(--color-danger-surface);
 }
-.notice-error p::before {
-  content: "✖ " / "";
+.notice-error .status-icon {
   color: var(--color-danger);
 }
 .notice-warning {
   border-color: var(--color-border-secondary);
   background: var(--color-surface-secondary);
 }
-.notice-warning p::before {
-  content: "⚠ " / "";
+.notice-warning .status-icon {
   color: var(--color-secondary);
 }
 .notice-success {
   border-color: var(--color-success);
   background: var(--color-success-surface);
 }
-.notice-success p::before {
-  content: "✓ " / "";
+.notice-success .status-icon {
   color: var(--color-success);
 }
 .notice-actions {
@@ -1037,6 +1109,44 @@ main {
   accent-color: var(--color-secondary);
 }
 
+@media (max-width: 767px) {
+  .spotlight {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-6);
+    padding: var(--space-6) var(--space-5);
+  }
+  .spotlight-art {
+    order: 0;
+    justify-self: start;
+    width: min(46%, 180px);
+  }
+  .spotlight-actions .btn {
+    flex: 1 1 auto;
+  }
+  .results-head {
+    align-items: flex-start;
+  }
+  .dialog-backdrop {
+    align-items: flex-end;
+    padding: 0;
+  }
+  .dialog-panel {
+    max-height: calc(100dvh - var(--space-6));
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .dialog-header,
+  .filter-body,
+  .confirm-delete-body,
+  .dialog-actions {
+    padding-inline: var(--space-4);
+  }
+  .dialog-actions .btn {
+    flex: 1 1 auto;
+  }
+}
+
+
 .saved-page {
   padding-bottom: var(--space-6);
 }
@@ -1166,9 +1276,6 @@ main {
 .field-success {
   color: var(--color-success);
 }
-.field-success::before {
-  content: "✓ ";
-}
 .new-collection .btn {
   width: 100%;
 }
@@ -1219,6 +1326,38 @@ main {
   border: 1px dashed var(--color-border-strong);
   border-radius: var(--radius-card);
 }
+
+@media (max-width: 767px) {
+  .saved-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-template-areas:
+      "collections"
+      "results"
+      "create";
+    gap: var(--space-6);
+  }
+  .collection-list {
+    display: flex;
+    gap: var(--space-2);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    padding-right: var(--space-8);
+    -webkit-mask-image: var(--mask-scroll-edge);
+    mask-image: var(--mask-scroll-edge);
+  }
+  .collection-link {
+    flex: 0 0 auto;
+    width: auto;
+    border-color: var(--color-border);
+    border-radius: var(--radius-pill);
+  }
+  .collection-link.active {
+    box-shadow: none;
+    border-color: var(--color-primary);
+  }
+}
+
 
 .site-footer {
   padding: var(--space-6) var(--layout-gutter) calc(var(--space-6) + env(safe-area-inset-bottom, 0px) + var(--notice-space, 0px));
@@ -1647,9 +1786,6 @@ main {
   font-size: var(--font-size-small);
   font-weight: 500;
 }
-.field-error::before {
-  content: "⚠ " / "";
-}
 .optional,
 .field-hint {
   color: var(--color-text-muted);
@@ -1678,6 +1814,55 @@ main {
 }
 .auth-switch:hover {
   text-decoration: underline;
+}
+
+@media (max-width: 767px) {
+  .detail-backdrop {
+    padding: 0;
+    /* Not stretch: a stretched panel is capped at the screen height and long content spills
+       past its background. min-height below still fills the screen. */
+    align-items: flex-start;
+  }
+  .detail-panel {
+    min-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    border: 0;
+  }
+  .detail-hero {
+    border-radius: 0;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+    padding: calc(var(--space-16) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-6);
+  }
+  .detail-art {
+    width: min(44%, 160px);
+  }
+  .detail-actions {
+    flex-wrap: nowrap;
+  }
+  .detail-save {
+    flex: 1 1 auto;
+  }
+  .collection-trigger {
+    padding-inline: var(--space-3);
+  }
+  .collection-trigger-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+  .detail-body {
+    padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
+  }
+  .auth-panel {
+    width: 100%;
+    max-height: calc(100dvh - var(--space-6));
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+  }
 }
 
 .loader {

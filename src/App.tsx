@@ -19,6 +19,7 @@ import { Shelf } from './components/Shelf';
 import { Spotlight } from './components/Spotlight';
 import { FilterDialog } from './components/FilterDialog';
 import { KeywordChip } from './components/KeywordChip';
+import { StatusIcon } from './components/StatusIcon';
 import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
 import { describeDetailError, describeSearchErrors, describeSearchFailure, type LiveProblem } from './utils/liveErrors';
@@ -319,6 +320,9 @@ export default function App() {
 
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <Header
         activeType={activeType}
         onTypeChange={setActiveType}
@@ -332,7 +336,7 @@ export default function App() {
       />
 
       {isSavedPage ? (
-        <main>
+        <main id="main-content" tabIndex={-1}>
           <AccountNotices notices={accountNotices} />
           <SavedPage
             status={savedStatus}
@@ -356,7 +360,7 @@ export default function App() {
           />
         </main>
       ) : (
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <AccountNotices notices={accountNotices} />
         <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
         {spotlight && (
@@ -412,12 +416,19 @@ export default function App() {
               ) : (
                 trending.problem && (
                   <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
-                    <p role="status">{trending.problem.message}</p>
+                    <p role="status">
+                      <StatusIcon tone={trendingFailed ? 'error' : 'warning'} />
+                      {trending.problem.message}
+                    </p>
                     {trending.problem.retryable && (
                       <button
                         type="button"
                         className="btn btn-ghost"
-                        onClick={trending.retry}
+                        onClick={() => {
+                          // The button unmounts while retrying; keep keyboard focus in the shelf.
+                          document.getElementById('shelf-trending-title')?.focus();
+                          trending.retry();
+                        }}
                       >
                         Try again
                       </button>
@@ -432,7 +443,9 @@ export default function App() {
         <section className="results" aria-labelledby="results-title">
           <div className="results-head">
             <div>
-              <h2 id="results-title">{resultsHeading}</h2>
+              <h2 id="results-title" tabIndex={-1} data-focus-fallback>
+                {resultsHeading}
+              </h2>
               <p className="results-count" aria-live="polite">
                 {!awaitingLiveQuery && !liveLoading && !searchFailed &&
                   `${displayedItems.length} ${displayedItems.length === 1 ? 'title' : 'titles'}`}
@@ -464,7 +477,10 @@ export default function App() {
           {liveError && (
             <div className={`notice ${searchFailed ? 'notice-error' : 'notice-warning'}`}>
               {/* A partial outage is informational; only a failed search interrupts screen readers. */}
-              <p role={searchFailed ? 'alert' : 'status'}>{liveError.message}</p>
+              <p role={searchFailed ? 'alert' : 'status'}>
+                <StatusIcon tone={searchFailed ? 'error' : 'warning'} />
+                {liveError.message}
+              </p>
               {liveError.retryable && (
                 <button type="button" className="btn btn-ghost" onClick={() => setSearchAttempt((n) => n + 1)}>
                   Try again

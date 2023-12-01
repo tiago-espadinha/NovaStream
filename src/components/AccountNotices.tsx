@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { StatusIcon } from './StatusIcon';
 
 export interface AccountNotice {
   id: string;
@@ -37,7 +38,10 @@ export function AccountNotices({ notices }: { notices: AccountNotice[] }) {
     <div ref={regionRef} className="account-notices" role="status" aria-live="polite">
       {notices.map((notice) => (
         <div key={notice.id} className={`notice notice-${notice.tone}`}>
-          <p>{notice.message}</p>
+          <p>
+            <StatusIcon tone={notice.tone} />
+            {notice.message}
+          </p>
           <div className="notice-actions">
             {notice.action && (
               <button type="button" className="btn btn-primary" onClick={notice.action.onClick}>
