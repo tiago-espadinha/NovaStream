@@ -185,4 +185,24 @@
       backdrop-filter: blur(8px);
     }
   }
+  @media (max-width: 767px) {
+    .header-bar {
+      grid-template-columns: auto 1fr;
+      grid-template-areas:
+        'logo actions'
+        'search search';
+      gap: var(--space-3);
+    }
+    .header-actions {
+      justify-self: end;
+      gap: var(--space-3);
+    }
+    .search {
+      max-width: none;
+    }
+    .header-types {
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+  }
 }

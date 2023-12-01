@@ -10,6 +10,23 @@
     white-space: nowrap;
     border: 0;
   }
+  /* Hidden until focused, then the first thing on screen. */
+  .skip-link {
+    position: absolute;
+    top: calc(var(--space-2) + env(safe-area-inset-top, 0px));
+    left: var(--space-4);
+    z-index: 40;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-control);
+    background: var(--color-primary);
+    color: var(--color-on-primary);
+    font-weight: 700;
+    text-decoration: none;
+    transform: translateY(-200%);
+  }
+  .skip-link:focus {
+    transform: none;
+  }
   .eyebrow {
     margin: 0 0 var(--space-2);
     color: var(--color-secondary);
@@ -117,13 +134,22 @@
     border-color: var(--color-danger);
     background: var(--color-danger-surface);
   }
+  .notice-error .status-icon {
+    color: var(--color-danger);
+  }
   .notice-warning {
     border-color: var(--color-border-secondary);
     background: var(--color-surface-secondary);
   }
+  .notice-warning .status-icon {
+    color: var(--color-secondary);
+  }
   .notice-success {
     border-color: var(--color-success);
     background: var(--color-success-surface);
+  }
+  .notice-success .status-icon {
+    color: var(--color-success);
   }
   .notice-actions {
     display: flex;
@@ -232,6 +258,26 @@
     outline: 2px solid var(--color-focus);
     outline-offset: 2px;
   }
+  @media (max-width: 767px) {
+    .dialog-backdrop {
+      align-items: flex-end;
+      padding: 0;
+    }
+    .dialog-panel {
+      max-height: calc(100dvh - var(--space-6));
+      border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .dialog-header,
+    .filter-body,
+    .confirm-delete-body,
+    .dialog-actions {
+      padding-inline: var(--space-4);
+    }
+    .dialog-actions .btn {
+      flex: 1 1 auto;
+    }
+  }
   .field-label {
     margin-bottom: calc(-1 * var(--space-2));
     color: var(--color-text);
@@ -240,9 +286,6 @@
   }
   .field-success {
     color: var(--color-success);
-  }
-  .field-success::before {
-    content: '✓ ';
   }
   .btn-danger {
     background: var(--color-danger);
@@ -295,9 +338,6 @@
     color: var(--color-danger);
     font-size: var(--font-size-small);
     font-weight: 500;
-  }
-  .field-error::before {
-    content: '⚠ ' / '';
   }
   .optional,
   .field-hint {

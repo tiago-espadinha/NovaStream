@@ -162,4 +162,34 @@
     border: 1px dashed var(--color-border-strong);
     border-radius: var(--radius-card);
   }
+  @media (max-width: 767px) {
+    .saved-layout {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: none;
+      grid-template-areas:
+        'collections'
+        'results'
+        'create';
+      gap: var(--space-6);
+    }
+    .collection-list {
+      display: flex;
+      gap: var(--space-2);
+      overflow-x: auto;
+      padding-bottom: var(--space-2);
+      padding-right: var(--space-8);
+      -webkit-mask-image: var(--mask-scroll-edge);
+      mask-image: var(--mask-scroll-edge);
+    }
+    .collection-link {
+      flex: 0 0 auto;
+      width: auto;
+      border-color: var(--color-border);
+      border-radius: var(--radius-pill);
+    }
+    .collection-link.active {
+      box-shadow: none;
+      border-color: var(--color-primary);
+    }
+  }
 }

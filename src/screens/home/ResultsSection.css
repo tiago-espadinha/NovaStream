@@ -22,4 +22,9 @@
     align-items: center;
     gap: var(--space-3);
   }
+  @media (max-width: 767px) {
+    .results-head {
+      align-items: flex-start;
+    }
+  }
 }
