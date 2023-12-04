@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { v4 as uuid } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { createUser, findUserByEmail, findUserById, updateUser } from '../db/store.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { requireAuth, sessionEnded, signToken } from '../middleware/auth.js';
@@ -21,7 +21,7 @@ authRouter.post('/register', async (req, res) => {
   }
 
   const user = {
-    id: uuid(),
+    id: randomUUID(),
     email: value.email,
     name: value.name,
     passwordHash: await hashPassword(value.password),
