@@ -4,6 +4,7 @@ import { createUser, findUserByEmail, findUserById, updateUser } from '../db/sto
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { requireAuth, sessionEnded, signToken } from '../middleware/auth.js';
 import { parseCredentials, parsePreferences } from '../utils/validate.js';
+import { asyncRoute } from '../utils/asyncRoute.js';
 
 export const authRouter = Router();
 
@@ -12,11 +13,11 @@ function toPublicUser(user) {
   return rest;
 }
 
-authRouter.post('/register', async (req, res) => {
+authRouter.post('/register', asyncRoute(async (req, res) => {
   const { value, error } = parseCredentials(req.body, { register: true });
   if (error) return res.status(400).json({ error });
 
-  if (findUserByEmail(value.email)) {
+  if (await findUserByEmail(value.email)) {
     return res.status(409).json({ error: 'An account with that email already exists' });
   }
 
@@ -29,39 +30,41 @@ authRouter.post('/register', async (req, res) => {
     savedMedia: [],
     createdAt: new Date().toISOString(),
   };
-  createUser(user);
+  if (!(await createUser(user))) {
+    return res.status(409).json({ error: 'An account with that email already exists' });
+  }
 
   const token = signToken({ sub: user.id });
   res.status(201).json({ token, user: toPublicUser(user) });
-});
+}));
 
-authRouter.post('/login', async (req, res) => {
+authRouter.post('/login', asyncRoute(async (req, res) => {
   const { value, error } = parseCredentials(req.body);
   if (error) return res.status(400).json({ error });
 
-  const user = findUserByEmail(value.email);
+  const user = await findUserByEmail(value.email);
   if (!user || !(await verifyPassword(value.password, user.passwordHash))) {
     return res.status(401).json({ error: 'Invalid email or password' });
   }
 
   const token = signToken({ sub: user.id });
   res.json({ token, user: toPublicUser(user) });
-});
+}));
 
-authRouter.get('/me', requireAuth, (req, res) => {
-  const user = findUserById(req.userId);
+authRouter.get('/me', requireAuth, asyncRoute(async (req, res) => {
+  const user = await findUserById(req.userId);
   if (!user) return sessionEnded(res);
   res.json({ user: toPublicUser(user) });
-});
+}));
 
-authRouter.patch('/preferences', requireAuth, (req, res) => {
-  const user = findUserById(req.userId);
+authRouter.patch('/preferences', requireAuth, asyncRoute(async (req, res) => {
+  const user = await findUserById(req.userId);
   if (!user) return sessionEnded(res);
   const { value, error } = parsePreferences(req.body);
   if (error) return res.status(400).json({ error });
 
-  const updated = updateUser(req.userId, {
+  const updated = await updateUser(req.userId, {
     preferences: { ...user.preferences, ...value },
   });
   res.json({ user: toPublicUser(updated) });
-});
+}));

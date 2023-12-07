@@ -1,68 +1,139 @@
-// A minimal JSON-file "database" so auth + saved media work out of the box with zero
-// setup. This is a stand-in, not a real database — swap it for Postgres/Prisma (see the
-// project guide's Phase 3) once you're past prototyping. Every function here is the only
-// place that touches the file, so that swap only touches this module.
+// User records (accounts, saved media, collections). Two backends behind the same async API:
+// - Upstash Redis over its REST API when UPSTASH_REDIS_REST_URL/TOKEN (or the KV_REST_API_*
+//   names Vercel's marketplace injects) are set — needed on Vercel, whose filesystem is
+//   read-only and wiped between invocations.
+// - Otherwise a local JSON file, so development works with zero setup.
+// Routes only use the functions exported at the bottom; nothing else touches storage.
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, 'data.json');
+const DEFAULT_DB_PATH = path.join(__dirname, 'data.json');
 
-function readRaw() {
-  if (!fs.existsSync(DB_PATH)) {
-    const initial = { users: [] };
-    fs.writeFileSync(DB_PATH, JSON.stringify(initial, null, 2));
-    return initial;
+const emailKey = (email) => email.toLowerCase();
+
+export function createFileBackend(dbPath = DEFAULT_DB_PATH) {
+  function readRaw() {
+    if (!fs.existsSync(dbPath)) {
+      const initial = { users: [] };
+      fs.writeFileSync(dbPath, JSON.stringify(initial, null, 2));
+      return initial;
+    }
+    return JSON.parse(fs.readFileSync(dbPath, 'utf-8'));
   }
-  return JSON.parse(fs.readFileSync(DB_PATH, 'utf-8'));
+
+  function writeRaw(data) {
+    fs.writeFileSync(dbPath, JSON.stringify(data, null, 2));
+  }
+
+  return {
+    async getUser(id) {
+      return readRaw().users.find((u) => u.id === id) ?? null;
+    },
+    async getUserByEmail(email) {
+      return readRaw().users.find((u) => emailKey(u.email) === emailKey(email)) ?? null;
+    },
+    async insertUser(user) {
+      const data = readRaw();
+      if (data.users.some((u) => emailKey(u.email) === emailKey(user.email))) return false;
+      data.users.push(user);
+      writeRaw(data);
+      return true;
+    },
+    async putUser(user) {
+      const data = readRaw();
+      const idx = data.users.findIndex((u) => u.id === user.id);
+      if (idx === -1) return;
+      data.users[idx] = user;
+      writeRaw(data);
+    },
+  };
 }
 
-function writeRaw(data) {
-  fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
+export function createRedisBackend({ url, token, fetchImpl = fetch }) {
+  async function command(...args) {
+    const res = await fetchImpl(url, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args),
+    });
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok || body.error) throw new Error(`Redis ${args[0]} failed: ${body.error || res.status}`);
+    return body.result;
+  }
+
+  const userKey = (id) => `user:${id}`;
+  const emailIndexKey = (email) => `user-email:${emailKey(email)}`;
+
+  async function getUser(id) {
+    const raw = await command('GET', userKey(id));
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  return {
+    getUser,
+    async getUserByEmail(email) {
+      const id = await command('GET', emailIndexKey(email));
+      return id ? getUser(id) : null;
+    },
+    async insertUser(user) {
+      // Claiming the email first makes duplicate registrations fail atomically.
+      const claimed = await command('SET', emailIndexKey(user.email), user.id, 'NX');
+      if (claimed !== 'OK') return false;
+      await command('SET', userKey(user.id), JSON.stringify(user));
+      return true;
+    },
+    async putUser(user) {
+      await command('SET', userKey(user.id), JSON.stringify(user));
+    },
+  };
 }
 
-export function findUserByEmail(email) {
-  const data = readRaw();
-  return data.users.find((u) => u.email.toLowerCase() === email.toLowerCase()) ?? null;
+function backendFromEnv(env = process.env) {
+  const url = env.UPSTASH_REDIS_REST_URL || env.KV_REST_API_URL;
+  const token = env.UPSTASH_REDIS_REST_TOKEN || env.KV_REST_API_TOKEN;
+  return url && token ? createRedisBackend({ url, token }) : createFileBackend();
 }
 
-export function findUserById(id) {
-  const data = readRaw();
-  return data.users.find((u) => u.id === id) ?? null;
+export function createStore(backend) {
+  return {
+    findUserByEmail: (email) => backend.getUserByEmail(email),
+    findUserById: (id) => backend.getUser(id),
+
+    /** Resolves to the user, or null when the email is already registered. */
+    async createUser(user) {
+      return (await backend.insertUser(user)) ? user : null;
+    },
+
+    async updateUser(id, patch) {
+      const user = await backend.getUser(id);
+      if (!user) return null;
+      const updated = { ...user, ...patch };
+      await backend.putUser(updated);
+      return updated;
+    },
+
+    async addSavedMedia(userId, media) {
+      const user = await backend.getUser(userId);
+      if (!user) return null;
+      if (!user.savedMedia.some((m) => m.id === media.id)) {
+        user.savedMedia.push({ ...media, savedAt: new Date().toISOString() });
+        await backend.putUser(user);
+      }
+      return user.savedMedia;
+    },
+
+    async removeSavedMedia(userId, mediaId) {
+      const user = await backend.getUser(userId);
+      if (!user) return null;
+      user.savedMedia = user.savedMedia.filter((m) => m.id !== mediaId);
+      await backend.putUser(user);
+      return user.savedMedia;
+    },
+  };
 }
 
-export function createUser(user) {
-  const data = readRaw();
-  data.users.push(user);
-  writeRaw(data);
-  return user;
-}
+const store = createStore(backendFromEnv());
 
-export function updateUser(id, patch) {
-  const data = readRaw();
-  const idx = data.users.findIndex((u) => u.id === id);
-  if (idx === -1) return null;
-  data.users[idx] = { ...data.users[idx], ...patch };
-  writeRaw(data);
-  return data.users[idx];
-}
-
-export function addSavedMedia(userId, media) {
-  const data = readRaw();
-  const user = data.users.find((u) => u.id === userId);
-  if (!user) return null;
-  const exists = user.savedMedia.some((m) => m.id === media.id);
-  if (!exists) user.savedMedia.push({ ...media, savedAt: new Date().toISOString() });
-  writeRaw(data);
-  return user.savedMedia;
-}
-
-export function removeSavedMedia(userId, mediaId) {
-  const data = readRaw();
-  const user = data.users.find((u) => u.id === userId);
-  if (!user) return null;
-  user.savedMedia = user.savedMedia.filter((m) => m.id !== mediaId);
-  writeRaw(data);
-  return user.savedMedia;
-}
+export const { findUserByEmail, findUserById, createUser, updateUser, addSavedMedia, removeSavedMedia } = store;
