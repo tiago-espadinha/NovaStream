@@ -175,6 +175,18 @@ export function searchTvByTag(tag) {
   return discoverByKeyword("tv", tag);
 }
 
+// TMDb lists specials (season 0) first; regular seasons read better ahead of them.
+function seasonList(seasons) {
+  return (seasons || [])
+    .filter((season) => Number.isInteger(season?.season_number) && season.season_number >= 0)
+    .map((season) => ({
+      number: season.season_number,
+      name: season.name || (season.season_number === 0 ? "Specials" : `Season ${season.season_number}`),
+      episodeCount: season.episode_count ?? 0,
+    }))
+    .sort((a, b) => (a.number === 0) - (b.number === 0) || a.number - b.number);
+}
+
 export async function getMovieDetail(id) {
   const raw = await tmdbFetch(`/movie/${id}`, {
     append_to_response: "credits,watch/providers",
@@ -226,5 +238,6 @@ export async function getTvDetail(id) {
     posterUrl: raw.poster_path
       ? `https://image.tmdb.org/t/p/w500${raw.poster_path}`
       : null,
+    seasons: seasonList(raw.seasons),
   };
 }
