@@ -175,6 +175,22 @@ export function searchTvByTag(tag) {
   return discoverByKeyword("tv", tag);
 }
 
+function seasonName(number, name) {
+  return name || (number === 0 ? "Specials" : `Season ${number}`);
+}
+
+// TMDb lists specials (season 0) first; regular seasons read better ahead of them.
+function seasonList(seasons) {
+  return (seasons || [])
+    .filter((season) => Number.isInteger(season?.season_number) && season.season_number >= 0)
+    .map((season) => ({
+      number: season.season_number,
+      name: seasonName(season.season_number, season.name),
+      episodeCount: season.episode_count ?? 0,
+    }))
+    .sort((a, b) => (a.number === 0) - (b.number === 0) || a.number - b.number);
+}
+
 export async function getMovieDetail(id) {
   const raw = await tmdbFetch(`/movie/${id}`, {
     append_to_response: "credits,watch/providers",
@@ -226,5 +242,22 @@ export async function getTvDetail(id) {
     posterUrl: raw.poster_path
       ? `https://image.tmdb.org/t/p/w500${raw.poster_path}`
       : null,
+    seasons: seasonList(raw.seasons),
+  };
+}
+
+export async function getTvSeason(id, season) {
+  const raw = await tmdbFetch(`/tv/${id}/season/${season}`);
+  return {
+    number: season,
+    name: seasonName(season, raw.name),
+    episodes: (raw.episodes || [])
+      .filter((episode) => Number.isInteger(episode?.episode_number))
+      .map((episode) => ({
+        number: episode.episode_number,
+        title: episode.name || `Episode ${episode.episode_number}`,
+        airDate: episode.air_date || null,
+      }))
+      .sort((a, b) => a.number - b.number),
   };
 }

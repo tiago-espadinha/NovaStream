@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getMovieDetail, getTvDetail } from '../services/tmdb.js';
+import { getMovieDetail, getTvDetail, getTvSeason } from '../services/tmdb.js';
 import { getBookDetail } from '../services/openLibrary.js';
 import { getGameDetail } from '../services/rawg.js';
 import { getMusicDetail } from '../services/lastfm.js';
@@ -29,6 +29,38 @@ const GETTERS = {
   music: getMusicDetail,
 };
 
+const TMDB_ID = /^\d{1,10}$/;
+const SEASON_NUMBER = /^(0|[1-9]\d{0,2})$/;
+
+/** The series id and season number, or null; checked before either reaches a TMDb URL. */
+export function parseSeasonParams({ id, season }) {
+  if (!TMDB_ID.test(id) || !SEASON_NUMBER.test(season)) return null;
+  return { id, season: Number(season) };
+}
+
+function sendFailure(res, label, err) {
+  const { status, body } = failureResponse(err);
+  console.warn(`[media] ${label} failed (${body.code}): ${err.message}`);
+  res.status(status).json(body);
+}
+
+// GET /api/media/tv/:id/season/:season — one season's episodes, fetched when the viewer picks it
+mediaRouter.get('/tv/:id/season/:season', async (req, res) => {
+  const params = parseSeasonParams(req.params);
+  if (!params) return res.status(400).json({ error: 'Pick a valid series and season.' });
+
+  try {
+    const season = await withTimeout(
+      () => getTvSeason(params.id, params.season),
+      PROVIDER_TIMEOUT_MS,
+      'tv season',
+    );
+    res.json(season);
+  } catch (err) {
+    sendFailure(res, `tv/${params.id}/season/${params.season}`, err);
+  }
+});
+
 // GET /api/media/:type/:id  — :id is the *provider's* raw id (not the "type-id" composite)
 mediaRouter.get('/:type/:id', async (req, res) => {
   const { type, id } = req.params;
@@ -39,8 +71,6 @@ mediaRouter.get('/:type/:id', async (req, res) => {
     const detail = await withTimeout(() => getter(id), PROVIDER_TIMEOUT_MS, `${type} detail`);
     res.json(detail);
   } catch (err) {
-    const { status, body } = failureResponse(err);
-    console.warn(`[media] ${type}/${JSON.stringify(id)} failed (${body.code}): ${err.message}`);
-    res.status(status).json(body);
+    sendFailure(res, `${type}/${JSON.stringify(id)}`, err);
   }
 });
