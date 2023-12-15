@@ -8,6 +8,7 @@ import { ScoreBadge } from '../../components/ScoreBadge/ScoreBadge';
 import HeartIcon from '../../components/HeartIcon/HeartIcon';
 import { CollectionMenu } from './CollectionMenu';
 import { ArtworkViewer } from './ArtworkViewer';
+import { SeriesEpisodes } from './SeriesEpisodes';
 import './MediaDetail.css';
 
 interface MediaDetailProps {
@@ -205,6 +206,10 @@ export function MediaDetail({
                 ))}
               </ul>
             </section>
+          )}
+
+          {item.type === 'tv' && item.seasons && item.seasons.length > 0 && (
+            <SeriesEpisodes key={item.id} externalId={item.id.replace(/^tv-/, '')} seasons={item.seasons} />
           )}
         </div>
         {viewingArtwork && item.posterUrl && (
