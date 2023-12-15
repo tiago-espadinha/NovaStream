@@ -88,3 +88,12 @@ export function describeDetailError(error: unknown): LiveProblem {
   if (code === 'timeout') return { message: 'The source took too long to respond.', retryable: true };
   return { message: 'This title couldn’t be loaded right now.', retryable: true };
 }
+
+export function describeSeasonError(error: unknown): LiveProblem {
+  const code = error instanceof ApiError ? error.code : undefined;
+  if (code === 'not_found') return { message: 'There’s no episode list for this season.', retryable: false };
+  if (code === 'not_configured') return { message: 'Episodes aren’t set up on the server.', retryable: false };
+  if (error instanceof ApiError && error.status === 400) return { message: error.message, retryable: false };
+  if (code === 'timeout') return { message: 'The episode list took too long to load.', retryable: true };
+  return { message: 'The episode list couldn’t be loaded right now.', retryable: true };
+}

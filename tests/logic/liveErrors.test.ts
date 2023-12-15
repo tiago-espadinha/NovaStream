@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../src/services/apiService';
 import {
   describeDetailError,
+  describeSeasonError,
   describeSearchErrors,
   describeSearchFailure,
   describeTrendingErrors,
@@ -77,6 +78,26 @@ describe('describeDetailError', () => {
     const problem = describeDetailError(new Error('TMDb request failed: 401 Unauthorized'));
     expect(problem.message).toBe('This title couldn’t be loaded right now.');
     expect(problem.retryable).toBe(true);
+  });
+});
+
+describe('describeSeasonError', () => {
+  it('only offers a retry when trying again could help', () => {
+    const retryable = (error: unknown) => describeSeasonError(error).retryable;
+    expect(retryable(new ApiError(404, 'x', 'not_found'))).toBe(false);
+    expect(retryable(new ApiError(503, 'x', 'not_configured'))).toBe(false);
+    expect(retryable(new ApiError(400, 'Pick a valid series and season.'))).toBe(false);
+    expect(retryable(new ApiError(504, 'x', 'timeout'))).toBe(true);
+    expect(retryable(new TypeError('Failed to fetch'))).toBe(true);
+  });
+
+  it('talks about the season rather than the whole title, and hides raw errors', () => {
+    expect(describeSeasonError(new ApiError(404, 'x', 'not_found')).message).toBe(
+      'There’s no episode list for this season.',
+    );
+    expect(describeSeasonError(new Error('TMDb request failed: 401')).message).toBe(
+      'The episode list couldn’t be loaded right now.',
+    );
   });
 });
 
