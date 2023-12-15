@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
-import { getTvDetail } from "./tmdb.js";
+import { getTvDetail, getTvSeason } from "./tmdb.js";
 
 let originalFetch;
 let originalApiKey;
@@ -57,4 +57,32 @@ test("keeps a specials-only series and tolerates missing season data", async () 
 
   mockTmdb({ id: 7, name: "Example Show" });
   assert.deepEqual((await getTvDetail("7")).seasons, []);
+});
+
+test("maps a season's episodes in order, with fallbacks for missing fields", async () => {
+  const paths = mockTmdb({
+    name: "Season 2",
+    episodes: [
+      { episode_number: 2, name: "Second", air_date: "2024-01-12", overview: "Not sent", still_path: "/x.jpg" },
+      { episode_number: 1, name: "", air_date: "" },
+      { name: "No number" },
+    ],
+  });
+
+  const season = await getTvSeason("7", 2);
+
+  assert.deepEqual(paths, ["/3/tv/7/season/2"]);
+  assert.deepEqual(season, {
+    number: 2,
+    name: "Season 2",
+    episodes: [
+      { number: 1, title: "Episode 1", airDate: null },
+      { number: 2, title: "Second", airDate: "2024-01-12" },
+    ],
+  });
+});
+
+test("gives an empty episode list when TMDb has none", async () => {
+  mockTmdb({ name: null });
+  assert.deepEqual(await getTvSeason("7", 0), { number: 0, name: "Specials", episodes: [] });
 });
