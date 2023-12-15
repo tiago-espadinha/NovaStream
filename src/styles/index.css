@@ -1649,6 +1649,56 @@ main:focus {
   white-space: nowrap;
   font-size: var(--font-size-control);
 }
+/* A long season name sizes the select; without min-width: 0 it would widen the whole panel. */
+.episodes {
+  min-width: 0;
+}
+.episodes-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.episodes-header .meta-label {
+  margin: 0;
+}
+.episodes-season {
+  display: flex;
+  min-width: 0;
+}
+.episodes-season select {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 20rem;
+  text-overflow: ellipsis;
+}
+.episodes .spinner {
+  margin: var(--space-6) auto;
+}
+.episodes-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  color: var(--color-text-muted);
+}
+.episodes-status p {
+  margin: 0;
+}
+/* Room for three-digit episode numbers; titles wrap instead of being cut off. */
+.episode-row {
+  grid-template-columns: 3.5ch minmax(0, 1fr) auto;
+  align-items: baseline;
+}
+.episode-title {
+  overflow-wrap: anywhere;
+  font-size: var(--font-size-control);
+}
+.episode-row .track-duration {
+  white-space: nowrap;
+}
 .platform-chips {
   display: flex;
   flex-wrap: wrap;
@@ -1822,6 +1872,12 @@ main:focus {
     /* Not stretch: a stretched panel is capped at the screen height and long content spills
        past its background. min-height below still fills the screen. */
     align-items: flex-start;
+  }
+  .episodes-season {
+    flex: 1 1 100%;
+  }
+  .episodes-season select {
+    max-width: none;
   }
   .detail-panel {
     min-height: 100dvh;
