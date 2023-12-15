@@ -47,6 +47,27 @@ export interface ContentItem extends MediaSummary {
   platforms: string[];
   playStats?: { listeners: string; playcount: string };
   tracklist?: { name: string; duration: string }[];
+  /** Series only: regular seasons in order, then specials (season 0). Episodes load per season. */
+  seasons?: SeasonSummary[];
+}
+
+export interface SeasonSummary {
+  number: number;
+  name: string;
+  episodeCount: number;
+}
+
+export interface Episode {
+  number: number;
+  title: string;
+  /** ISO date (YYYY-MM-DD), or null when TMDb hasn't announced one. */
+  airDate: string | null;
+}
+
+export interface SeasonEpisodes {
+  number: number;
+  name: string;
+  episodes: Episode[];
 }
 
 export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {

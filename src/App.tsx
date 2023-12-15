@@ -34,7 +34,6 @@ import {
 import './screens/home/HomeScreen.css';
 import './screens/home/ResultsSection.css';
 import './components/SiteFooter/SiteFooter.css';
-import './screens/detail/SeriesEpisodes.css';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 const FAVORITES_SHELF_LIMIT = 8;

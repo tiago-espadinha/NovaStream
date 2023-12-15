@@ -178,6 +178,8 @@
        past its background. min-height below still fills the screen. */
       align-items: flex-start;
     }
+  }
+  @media (max-width: 767px) {
     .detail-panel {
       min-height: 100dvh;
       margin: 0;
