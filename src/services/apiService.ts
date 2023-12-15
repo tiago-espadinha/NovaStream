@@ -1,5 +1,13 @@
 import { API_BASE_URL } from '../config';
-import type { AuthUser, ContentItem, ContentType, MediaSummary, MusicKind, UserPreferences } from '../types';
+import type {
+  AuthUser,
+  ContentItem,
+  ContentType,
+  MediaSummary,
+  MusicKind,
+  SeasonEpisodes,
+  UserPreferences,
+} from '../types';
 import type { CollectionsDoc } from '../utils/collections';
 
 export type ProviderErrorCode = 'not_configured' | 'not_found' | 'timeout' | 'unavailable';
@@ -59,6 +67,10 @@ export function getTrending() {
 
 export function getMediaDetail(type: ContentType, externalId: string) {
   return request<ContentItem>(`/media/${type}/${externalId}`);
+}
+
+export function getTvSeason(externalId: string, season: number) {
+  return request<SeasonEpisodes>(`/media/tv/${encodeURIComponent(externalId)}/season/${season}`);
 }
 
 // ---- auth ----
