@@ -593,6 +593,8 @@ export default function App() {
               item={detail}
               favorite={isFavorite(detail.id)}
               onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onOpenRelated={setSelectedId}
               collections={collectionsState.collectionsFor(detail.type)}
               allCollections={collectionsState.collections}
               collectionIds={collectionsState.assignments[detail.id] ?? []}

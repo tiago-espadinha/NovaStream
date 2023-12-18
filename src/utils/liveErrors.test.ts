@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../services/apiService';
-import { describeDetailError, describeSeasonError, describeSearchErrors, describeSearchFailure, describeTrendingErrors } from './liveErrors';
+import {
+  describeAlbumsError,
+  describeDetailError,
+  describeSeasonError,
+  describeSearchErrors,
+  describeSearchFailure,
+  describeTrendingErrors,
+} from './liveErrors';
 
 describe('describeSearchErrors', () => {
   it('returns null when every source answered', () => {
@@ -91,6 +98,16 @@ describe('describeSeasonError', () => {
     );
     expect(describeSeasonError(new Error('TMDb request failed: 401')).message).toBe(
       'The episode list couldn’t be loaded right now.',
+    );
+  });
+});
+
+describe('describeAlbumsError', () => {
+  it('offers a retry for timeouts and network failures, and hides raw errors', () => {
+    expect(describeAlbumsError(new ApiError(504, 'x', 'timeout')).retryable).toBe(true);
+    expect(describeAlbumsError(new ApiError(503, 'x', 'not_configured')).retryable).toBe(false);
+    expect(describeAlbumsError(new Error('Last.fm error 29: Rate limit')).message).toBe(
+      'The album list couldn’t be loaded right now.',
     );
   });
 });

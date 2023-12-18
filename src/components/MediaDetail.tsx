@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDialog } from "../hooks/useDialog";
-import type { ContentItem, ContentType } from "../types";
+import type { ContentItem, ContentType, MediaSummary } from "../types";
 import type { SavedCollection } from "../utils/collections";
 import { mediaTypeLabel } from "../utils/discovery";
 import { fallbackArtwork } from "../utils/gradient";
@@ -9,11 +9,16 @@ import HeartIcon from "./HeartIcon";
 import { CollectionMenu } from "./CollectionMenu";
 import { ArtworkViewer } from "./ArtworkViewer";
 import { SeriesEpisodes } from "./SeriesEpisodes";
+import { ArtistAlbums } from "./ArtistAlbums";
 
 interface MediaDetailProps {
   item: ContentItem;
   favorite: boolean;
-  onToggleFavorite: (item: ContentItem) => void;
+  onToggleFavorite: (item: MediaSummary) => void;
+  /** Whether a related title (e.g. one of an artist's albums) is a favorite. */
+  isFavorite: (id: string) => boolean;
+  /** Opens a related title from inside this detail. */
+  onOpenRelated: (id: string) => void;
   collections: SavedCollection[];
   allCollections: SavedCollection[];
   collectionIds: string[];
@@ -28,6 +33,8 @@ export function MediaDetail({
   item,
   favorite,
   onToggleFavorite,
+  isFavorite,
+  onOpenRelated,
   collections,
   allCollections,
   collectionIds,
@@ -185,6 +192,16 @@ export function MediaDetail({
                 ))}
               </ol>
             </section>
+          )}
+
+          {item.type === "music" && item.musicKind === "artist" && (
+            <ArtistAlbums
+              key={item.id}
+              externalId={item.id.replace(/^music-/, "")}
+              isFavorite={isFavorite}
+              onToggleFavorite={onToggleFavorite}
+              onSelect={onOpenRelated}
+            />
           )}
 
           {(item.type === "movie" || item.type === "tv") && streamingPlatforms.length > 0 && (

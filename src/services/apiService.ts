@@ -73,6 +73,11 @@ export function getTvSeason(externalId: string, season: number) {
   return request<SeasonEpisodes>(`/media/tv/${encodeURIComponent(externalId)}/season/${season}`);
 }
 
+/** `externalId` is the artist id after "music-", already URI-encoded like `getMediaDetail`'s. */
+export function getArtistAlbums(externalId: string) {
+  return request<{ albums: MediaSummary[] }>(`/media/music/${externalId}/albums`);
+}
+
 // ---- auth ----
 
 export interface AuthResponse {

@@ -1676,6 +1676,29 @@ main:focus {
 .episodes .spinner {
   margin: var(--space-6) auto;
 }
+/* A shelf inside the detail panel: headed like the panel's other sections. As a grid item it
+   would otherwise grow to fit every card, so the track never scrolls. */
+.detail-albums {
+  min-width: 0;
+}
+.detail-albums .shelf {
+  margin-bottom: 0;
+}
+.detail-albums .shelf-head {
+  margin-bottom: var(--space-2);
+}
+.detail-albums .shelf-head h3 {
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.detail-albums-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
 .episodes-status {
   display: flex;
   flex-wrap: wrap;
