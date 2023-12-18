@@ -97,3 +97,10 @@ export function describeSeasonError(error: unknown): LiveProblem {
   if (code === 'timeout') return { message: 'The episode list took too long to load.', retryable: true };
   return { message: 'The episode list couldn’t be loaded right now.', retryable: true };
 }
+
+export function describeAlbumsError(error: unknown): LiveProblem {
+  const code = error instanceof ApiError ? error.code : undefined;
+  if (code === 'not_configured') return { message: 'Albums aren’t set up on the server.', retryable: false };
+  if (code === 'timeout') return { message: 'The album list took too long to load.', retryable: true };
+  return { message: 'The album list couldn’t be loaded right now.', retryable: true };
+}
