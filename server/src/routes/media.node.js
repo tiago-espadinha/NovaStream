@@ -126,3 +126,30 @@ test('keeps the series detail route working beside the season route', async () =
   assert.deepEqual(tmdbCalls, ['/3/tv/42']);
   assert.equal((await res.json()).title, 'Example Show');
 });
+
+test("serves an artist's albums and refuses ids that aren't an artist", async (t) => {
+  const originalLastfmKey = process.env.LASTFM_API_KEY;
+  process.env.LASTFM_API_KEY = 'test';
+  t.after(() => {
+    if (originalLastfmKey === undefined) delete process.env.LASTFM_API_KEY;
+    else process.env.LASTFM_API_KEY = originalLastfmKey;
+  });
+  const artists = [];
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(input);
+    if (url.hostname !== 'ws.audioscrobbler.com') return realFetch(input, init);
+    artists.push(url.searchParams.get('artist'));
+    return { ok: true, json: async () => ({ topalbums: { album: [{ name: 'First Record', playcount: '9000' }] } }) };
+  };
+  const artistId = encodeURIComponent('artist|||AC/DC');
+
+  const res = await fetch(`${baseUrl}/music/${artistId}/albums`);
+
+  assert.equal(res.status, 200);
+  assert.deepEqual(artists, ['AC/DC']);
+  assert.deepEqual((await res.json()).albums.map((album) => [album.title, album.artist]), [['First Record', 'AC/DC']]);
+
+  const notArtist = await fetch(`${baseUrl}/music/${encodeURIComponent('album|||AC/DC|||Back in Black')}/albums`);
+  assert.equal(notArtist.status, 404);
+  assert.equal(artists.length, 1);
+});

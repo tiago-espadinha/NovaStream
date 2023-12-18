@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
-import { getMusicDetail, searchMusic, searchMusicByTag } from "./lastfm.js";
+import { getArtistTopAlbums, getMusicDetail, searchMusic, searchMusicByTag } from "./lastfm.js";
 
 let originalFetch;
 let originalApiKey;
@@ -218,4 +218,79 @@ test("leaves album and song results with combined artist names alone", async () 
       ["song", "Shared Song", "Clairo, Wallows"],
     ],
   );
+});
+
+function topAlbums(albums) {
+  return { "artist.gettopalbums": { topalbums: { album: albums } } };
+}
+
+test("lists an artist's top albums by plays, without nulls, blanks or repeats, up to 12", async () => {
+  const fillers = Array.from({ length: 8 }, (_, i) => ({ name: `Filler ${i + 1}`, playcount: String(201 + i) }));
+  mockLastfm(topAlbums([
+    { name: "(null)", playcount: "999999" },
+    { name: "", playcount: "5" },
+    { name: "   ", playcount: "5" },
+    { name: "Small", playcount: "9" },
+    { name: "Medium", playcount: "100" },
+    { name: "dup", playcount: "400" },
+    { name: "Dup", playcount: "500" },
+    { name: "No Count" },
+    ...fillers,
+    { name: "Late Hit", playcount: "50000" },
+  ]));
+
+  const albums = await getArtistTopAlbums("artist|||The Example");
+  assert.deepEqual(albums.map((album) => album.title), [
+    "Late Hit",
+    "Dup",
+    ...fillers.map((album) => album.name).reverse(),
+    "Medium",
+    "Small",
+  ]);
+});
+
+test("maps a top album to a card that opens that album's detail", async () => {
+  mockLastfm(topAlbums({
+    name: "First Record",
+    playcount: "9000",
+    artist: { name: "The Example" },
+    image: [{ size: "extralarge", "#text": "https://example.com/first.jpg" }],
+  }));
+
+  assert.deepEqual(await getArtistTopAlbums("artist|||the example"), [{
+    id: `music-${encodeURIComponent("album|||The Example|||First Record")}`,
+    title: "First Record",
+    type: "music",
+    musicKind: "album",
+    rating: 9000,
+    tags: [],
+    genres: [],
+    releaseYear: null,
+    posterUrl: "https://example.com/first.jpg",
+    artist: "The Example",
+  }]);
+});
+
+test("asks Last.fm for the artist by name, separators and all", async () => {
+  const artists = [];
+  globalThis.fetch = async (input) => {
+    artists.push(new URL(input).searchParams.get("artist"));
+    return { ok: true, json: async () => ({}) };
+  };
+
+  assert.deepEqual(await getArtistTopAlbums("artist|||Simon & Garfunkel"), []);
+  assert.deepEqual(artists, ["Simon & Garfunkel"]);
+});
+
+test("rejects ids that aren't an artist without calling Last.fm", async () => {
+  const calls = mockLastfm({});
+  for (const id of ["album|||The Example|||First Record", "artist|||  ", "The Example"]) {
+    await assert.rejects(getArtistTopAlbums(id), { name: "ProviderError", code: "not_found" });
+  }
+  assert.deepEqual(calls, []);
+});
+
+test("reports a failed top-albums lookup as unavailable", async () => {
+  mockLastfm({}, ["artist.gettopalbums"]);
+  await assert.rejects(getArtistTopAlbums("artist|||The Example"), { name: "ProviderError", code: "unavailable" });
 });
