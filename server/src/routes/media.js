@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { getMovieDetail, getTvDetail, getTvSeason } from '../services/tmdb.js';
 import { getBookDetail } from '../services/openLibrary.js';
 import { getGameDetail } from '../services/rawg.js';
-import { getMusicDetail } from '../services/lastfm.js';
+import { getArtistTopAlbums, getMusicDetail } from '../services/lastfm.js';
 import { errorCode, PROVIDER_TIMEOUT_MS, withTimeout } from '../services/providerError.js';
 
 export const mediaRouter = Router();
@@ -58,6 +58,20 @@ mediaRouter.get('/tv/:id/season/:season', async (req, res) => {
     res.json(season);
   } catch (err) {
     sendFailure(res, `tv/${params.id}/season/${params.season}`, err);
+  }
+});
+
+// GET /api/media/music/:id/albums — an artist's top albums, fetched after the artist detail opens
+mediaRouter.get('/music/:id/albums', async (req, res) => {
+  try {
+    const albums = await withTimeout(
+      () => getArtistTopAlbums(req.params.id),
+      PROVIDER_TIMEOUT_MS,
+      'artist albums',
+    );
+    res.json({ albums });
+  } catch (err) {
+    sendFailure(res, `music/${JSON.stringify(req.params.id)}/albums`, err);
   }
 });
 

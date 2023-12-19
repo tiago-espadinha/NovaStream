@@ -35,6 +35,16 @@ import {
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 const FAVORITES_SHELF_LIMIT = 8;
 
+/** A detail left for a related title, kept so Back can return without reloading it. */
+interface DetailTrailEntry {
+  id: string;
+  item: ContentItem;
+  /** The artist's albums when they had loaded. */
+  albums?: MediaSummary[];
+  /** The related title opened from it. */
+  openedId: string;
+}
+
 function headingFor(query: string, awaitingLiveQuery: boolean, activeType: ContentType | 'all'): ReactNode {
   const parsed = parseContentQuery(query);
   if (parsed.kind !== 'text' && parsed.value) {
@@ -75,6 +85,13 @@ export default function App() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<LiveProblem | null>(null);
   const [detailAttempt, setDetailAttempt] = useState(0);
+  // Details left by opening a related title (an artist's album), oldest first; Back returns
+  // to the last one without fetching it again.
+  const [detailTrail, setDetailTrail] = useState<DetailTrailEntry[]>([]);
+  // Read once by the detail effect, which then skips the fetch.
+  const restoredDetail = useRef<DetailTrailEntry | null>(null);
+  // The trail entry Back last returned to; its albums and opened card are reused on return.
+  const [returnedTo, setReturnedTo] = useState<DetailTrailEntry | null>(null);
 
   const { user, status: sessionStatus, logout, refreshUser, sessionNotice, clearSessionNotice } = useAuth();
   const favorites = useFavorites();
@@ -183,6 +200,15 @@ export default function App() {
     setDetailLoading(false);
     if (!selectedId) {
       setDetail(null);
+      setDetailTrail([]);
+      setReturnedTo(null);
+      restoredDetail.current = null;
+      return;
+    }
+    const restored = restoredDetail.current;
+    restoredDetail.current = null;
+    if (restored?.id === selectedId) {
+      setDetail(restored.item);
       return;
     }
     const mockMatch = mockContent.find((item) => item.id === selectedId);
@@ -205,6 +231,26 @@ export default function App() {
       active = false;
     };
   }, [selectedId, detailAttempt]);
+
+  const previousDetail = detailTrail[detailTrail.length - 1];
+  // The restore sets `detail` to the entry's own item.
+  const returnedHere = returnedTo && returnedTo.item === detail ? returnedTo : null;
+
+  const openRelatedDetail = (id: string, albums?: MediaSummary[]) => {
+    if (selectedId && detail) {
+      setDetailTrail((trail) => [...trail, { id: selectedId, item: detail, albums, openedId: id }]);
+    }
+    setReturnedTo(null);
+    setSelectedId(id);
+  };
+
+  const backToPreviousDetail = () => {
+    if (!previousDetail) return;
+    restoredDetail.current = previousDetail;
+    setReturnedTo(previousDetail);
+    setDetailTrail((trail) => trail.slice(0, -1));
+    setSelectedId(previousDetail.id);
+  };
 
   const toggleCategory = (type: ContentType) => {
     const isSelected = selectedCategories.includes(type);
@@ -585,14 +631,24 @@ export default function App() {
               title={selectedTitle}
               error={detailError}
               onRetry={() => setDetailAttempt((n) => n + 1)}
+              backTo={previousDetail?.item.title}
+              onBack={backToPreviousDetail}
               onClose={() => setSelectedId(null)}
             />
           )}
           {detail && (
             <MediaDetail
+              // A new dialog per title, so focus moves into it as it does when a card opens one.
+              key={detail.id}
               item={detail}
               favorite={isFavorite(detail.id)}
               onToggleFavorite={toggleFavorite}
+              isFavorite={isFavorite}
+              onOpenRelated={openRelatedDetail}
+              backTo={previousDetail?.item.title}
+              onBack={backToPreviousDetail}
+              initialAlbums={returnedHere?.albums}
+              returnFocusTo={returnedHere?.openedId}
               collections={collectionsState.collectionsFor(detail.type)}
               allCollections={collectionsState.collections}
               collectionIds={collectionsState.assignments[detail.id] ?? []}

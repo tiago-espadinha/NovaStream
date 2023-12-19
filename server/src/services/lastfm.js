@@ -16,6 +16,10 @@ const CREDIT_SEPARATOR = /, | & | x | (?:feat|ft)\. /i;
 // A credit below this share of its solo artist's listeners is a collaboration, not a
 // band whose name happens to contain a separator ("Simon & Garfunkel").
 const CREDIT_LISTENER_SHARE = 0.1;
+// Albums shown on an artist's detail. Last.fm's top albums include "(null)" and repeated
+// titles, so more are requested than shown.
+const ARTIST_ALBUM_LIMIT = 12;
+const ARTIST_ALBUM_POOL = 30;
 
 function key() {
   const k = process.env.LASTFM_API_KEY;
@@ -501,6 +505,46 @@ export async function getMusicDetail(compositeId) {
     playStats: stats,
     tracklist: tracklist,
   };
+}
+
+/** An artist's most played albums as cards; `compositeId` is an artist id ("artist|||Name"). */
+export async function getArtistTopAlbums(compositeId) {
+  const [kind, ...rest] = compositeId.split("|||");
+  const artist = rest.join("|||");
+  if (kind !== "artist" || !artist.trim()) throw new ProviderError("not_found", "Not an artist id");
+
+  const data = await lastfmFetch({
+    method: "artist.gettopalbums",
+    artist,
+    autocorrect: 1,
+    limit: ARTIST_ALBUM_POOL,
+  });
+  const seen = new Set();
+  return toArray(data.topalbums?.album)
+    .filter((album) => album?.name?.trim() && album.name.trim() !== "(null)")
+    .sort((a, b) => (numericCount(b.playcount) ?? 0) - (numericCount(a.playcount) ?? 0))
+    .filter((album) => {
+      const name = album.name.trim().toLowerCase();
+      if (seen.has(name)) return false;
+      seen.add(name);
+      return true;
+    })
+    .slice(0, ARTIST_ALBUM_LIMIT)
+    .map((album) => {
+      const albumArtist = artistName(album.artist) || artist;
+      return {
+        id: musicId("album", albumArtist, album.name),
+        title: album.name,
+        type: "music",
+        musicKind: "album",
+        rating: numericCount(album.playcount),
+        tags: [],
+        genres: [],
+        releaseYear: null,
+        posterUrl: bestImage(album.image),
+        artist: albumArtist,
+      };
+    });
 }
 
 function artistDetail(artist, compositeId) {

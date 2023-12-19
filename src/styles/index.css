@@ -1389,6 +1389,23 @@ main:focus {
   right: var(--space-4);
   z-index: 2;
 }
+.detail-back {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 2;
+  /* Clear of the close button on the right; a long name is cut rather than wrapped. */
+  max-width: calc(100% - 7rem);
+  overflow: hidden;
+  background: var(--color-surface);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 768px) {
+  .detail-back ~ .detail-hero {
+    padding-top: calc(var(--space-16) + var(--space-4));
+  }
+}
 .detail-hero {
   position: relative;
   isolation: isolate;
@@ -1676,6 +1693,29 @@ main:focus {
 .episodes .spinner {
   margin: var(--space-6) auto;
 }
+/* A shelf inside the detail panel: headed like the panel's other sections. As a grid item it
+   would otherwise grow to fit every card, so the track never scrolls. */
+.detail-albums {
+  min-width: 0;
+}
+.detail-albums .shelf {
+  margin-bottom: 0;
+}
+.detail-albums .shelf-head {
+  margin-bottom: var(--space-2);
+}
+.detail-albums .shelf-head h3 {
+  color: var(--color-text-muted);
+  font-family: var(--font-body);
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.detail-albums-empty {
+  margin: 0;
+  color: var(--color-text-muted);
+}
 .episodes-status {
   display: flex;
   flex-wrap: wrap;
@@ -1890,6 +1930,9 @@ main:focus {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-5);
     padding: calc(var(--space-16) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-6);
+  }
+  .detail-back ~ .detail-hero {
+    padding-top: calc(var(--space-16) + var(--space-4) + env(safe-area-inset-top, 0px));
   }
   .detail-art {
     width: min(44%, 160px);

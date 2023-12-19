@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDialog } from "../hooks/useDialog";
-import type { ContentItem, ContentType } from "../types";
+import type { ContentItem, ContentType, MediaSummary } from "../types";
 import type { SavedCollection } from "../utils/collections";
 import { mediaTypeLabel } from "../utils/discovery";
 import { fallbackArtwork } from "../utils/gradient";
@@ -9,11 +9,23 @@ import HeartIcon from "./HeartIcon";
 import { CollectionMenu } from "./CollectionMenu";
 import { ArtworkViewer } from "./ArtworkViewer";
 import { SeriesEpisodes } from "./SeriesEpisodes";
+import { ArtistAlbums } from "./ArtistAlbums";
 
 interface MediaDetailProps {
   item: ContentItem;
   favorite: boolean;
-  onToggleFavorite: (item: ContentItem) => void;
+  onToggleFavorite: (item: MediaSummary) => void;
+  /** Whether a related title (e.g. one of an artist's albums) is a favorite. */
+  isFavorite: (id: string) => boolean;
+  /** Opens a related title from inside this detail. */
+  onOpenRelated: (id: string, albums?: MediaSummary[]) => void;
+  /** Title of the detail this one was opened from, for the Back button. */
+  backTo?: string;
+  onBack: () => void;
+  /** The artist's albums kept from before an album was opened, so coming back skips the request. */
+  initialAlbums?: MediaSummary[];
+  /** The related title this detail was left for; its card takes focus on return when it's still there. */
+  returnFocusTo?: string;
   collections: SavedCollection[];
   allCollections: SavedCollection[];
   collectionIds: string[];
@@ -28,6 +40,12 @@ export function MediaDetail({
   item,
   favorite,
   onToggleFavorite,
+  isFavorite,
+  onOpenRelated,
+  backTo,
+  onBack,
+  initialAlbums,
+  returnFocusTo,
   collections,
   allCollections,
   collectionIds,
@@ -39,6 +57,15 @@ export function MediaDetail({
 }: MediaDetailProps) {
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [viewingArtwork, setViewingArtwork] = useState(false);
+
+  // After useDialog has focused Close, which stays the fallback when the card is gone.
+  useEffect(() => {
+    if (!returnFocusTo) return;
+    panelRef.current
+      ?.querySelector<HTMLElement>(`[data-id="${CSS.escape(returnFocusTo)}"] .card-open`)
+      ?.focus();
+    // Only on opening: later re-renders must not pull focus back.
+  }, []);
   const streamingPlatforms = item.platforms
     .filter((platform) => platform.startsWith("Streaming on "))
     .map((platform) => platform.slice("Streaming on ".length));
@@ -57,7 +84,19 @@ export function MediaDetail({
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="icon-button detail-close" aria-label="Close details" onClick={onClose}>
+        {/* Before Close so Tab follows the screen, left to right; Close still takes first focus. */}
+        {backTo && (
+          <button type="button" className="btn btn-ghost detail-back" onClick={onBack}>
+            <span aria-hidden="true">‹ </span>Back to {backTo}
+          </button>
+        )}
+        <button
+          type="button"
+          className="icon-button detail-close"
+          aria-label="Close details"
+          data-autofocus
+          onClick={onClose}
+        >
           <span aria-hidden="true">✕</span>
         </button>
 
@@ -185,6 +224,16 @@ export function MediaDetail({
                 ))}
               </ol>
             </section>
+          )}
+
+          {item.type === "music" && item.musicKind === "artist" && (
+            <ArtistAlbums
+              externalId={item.id.replace(/^music-/, "")}
+              isFavorite={isFavorite}
+              onToggleFavorite={onToggleFavorite}
+              onSelect={onOpenRelated}
+              initialAlbums={initialAlbums}
+            />
           )}
 
           {(item.type === "movie" || item.type === "tv") && streamingPlatforms.length > 0 && (
