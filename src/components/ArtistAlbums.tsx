@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as api from '../services/apiService';
 import { ApiError } from '../services/apiService';
 import type { MediaSummary } from '../types';
@@ -11,16 +11,29 @@ interface ArtistAlbumsProps {
   externalId: string;
   isFavorite: (id: string) => boolean;
   onToggleFavorite: (item: MediaSummary) => void;
-  onSelect: (id: string) => void;
+  /** Opens an album, with the list it was picked from so coming back can reuse it. */
+  onSelect: (id: string, albums: MediaSummary[]) => void;
+  /** Albums already loaded for this artist (e.g. when coming back from one); skips the request. */
+  initialAlbums?: MediaSummary[];
 }
 
 /** The artist's most played albums; loads after the rest of the detail so it never holds it up. */
-export function ArtistAlbums({ externalId, isFavorite, onToggleFavorite, onSelect }: ArtistAlbumsProps) {
-  const [albums, setAlbums] = useState<MediaSummary[] | null>(null);
+export function ArtistAlbums({
+  externalId,
+  isFavorite,
+  onToggleFavorite,
+  onSelect,
+  initialAlbums,
+}: ArtistAlbumsProps) {
+  const [albums, setAlbums] = useState<MediaSummary[] | null>(initialAlbums ?? null);
   const [error, setError] = useState<LiveProblem | null>(null);
   const [attempt, setAttempt] = useState(0);
 
+  // Read once: the parent drops them when it moves on, which must not trigger a request.
+  const reusedAlbums = useRef(Boolean(initialAlbums));
+
   useEffect(() => {
+    if (reusedAlbums.current) return;
     let active = true;
     api
       .getArtistAlbums(externalId)
@@ -51,7 +64,7 @@ export function ArtistAlbums({ externalId, isFavorite, onToggleFavorite, onSelec
         items={albums ?? []}
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite}
-        onSelect={onSelect}
+        onSelect={(id) => onSelect(id, albums ?? [])}
         notice={
           error ? (
             <div className={`notice ${error.retryable ? 'notice-error' : 'notice-warning'}`}>

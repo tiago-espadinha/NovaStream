@@ -6,11 +6,14 @@ interface DetailStatusProps {
   title?: string;
   error: LiveProblem | null;
   onRetry: () => void;
+  /** Title of the detail this one was opened from, for the Back button. */
+  backTo?: string;
+  onBack: () => void;
   onClose: () => void;
 }
 
 /** Stands in for the detail overlay while a live title loads or after it fails. */
-export function DetailStatus({ title, error, onRetry, onClose }: DetailStatusProps) {
+export function DetailStatus({ title, error, onRetry, backTo, onBack, onClose }: DetailStatusProps) {
   const panelRef = useDialog<HTMLDivElement>(onClose);
 
   return (
@@ -44,6 +47,11 @@ export function DetailStatus({ title, error, onRetry, onClose }: DetailStatusPro
               }}
             >
               Try again
+            </button>
+          )}
+          {backTo && (
+            <button type="button" className="btn btn-ghost" onClick={onBack}>
+              Back to {backTo}
             </button>
           )}
           <button type="button" className="btn btn-ghost" onClick={onClose}>

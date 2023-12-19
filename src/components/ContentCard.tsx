@@ -28,7 +28,7 @@ export function ContentCard({
 }: ContentCardProps) {
   const Title = headingLevel === 4 ? "h4" : "h3";
   return (
-    <article className="card">
+    <article className="card" data-id={item.id}>
       <div className="card-art">
         {item.posterUrl ? (
           <img src={item.posterUrl} alt="" loading="lazy" />

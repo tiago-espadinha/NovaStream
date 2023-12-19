@@ -1389,6 +1389,23 @@ main:focus {
   right: var(--space-4);
   z-index: 2;
 }
+.detail-back {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  z-index: 2;
+  /* Clear of the close button on the right; a long name is cut rather than wrapped. */
+  max-width: calc(100% - 7rem);
+  overflow: hidden;
+  background: var(--color-surface);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (min-width: 768px) {
+  .detail-back ~ .detail-hero {
+    padding-top: calc(var(--space-16) + var(--space-4));
+  }
+}
 .detail-hero {
   position: relative;
   isolation: isolate;
@@ -1913,6 +1930,9 @@ main:focus {
     grid-template-columns: minmax(0, 1fr);
     gap: var(--space-5);
     padding: calc(var(--space-16) + env(safe-area-inset-top, 0px)) var(--space-4) var(--space-6);
+  }
+  .detail-back ~ .detail-hero {
+    padding-top: calc(var(--space-16) + var(--space-4) + env(safe-area-inset-top, 0px));
   }
   .detail-art {
     width: min(44%, 160px);
