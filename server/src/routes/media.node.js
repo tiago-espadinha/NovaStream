@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, afterEach, before, beforeEach, test } from 'node:test';
 import express from 'express';
+import { createDeezerClient, deezer as defaultDeezer } from '../services/deezer.js';
+import { setDeezerClient } from '../services/lastfm.js';
 import { ProviderError } from '../services/providerError.js';
 import { failureResponse, mediaRouter, parseSeasonParams } from './media.js';
 
@@ -130,7 +132,10 @@ test('keeps the series detail route working beside the season route', async () =
 test("serves an artist's albums and refuses ids that aren't an artist", async (t) => {
   const originalLastfmKey = process.env.LASTFM_API_KEY;
   process.env.LASTFM_API_KEY = 'test';
+  // Deezer has nothing for this album, without the lookup reaching the network.
+  setDeezerClient(createDeezerClient({ fetch: async () => ({ ok: true, json: async () => ({ data: [] }) }) }));
   t.after(() => {
+    setDeezerClient(defaultDeezer);
     if (originalLastfmKey === undefined) delete process.env.LASTFM_API_KEY;
     else process.env.LASTFM_API_KEY = originalLastfmKey;
   });

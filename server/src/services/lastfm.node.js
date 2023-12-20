@@ -1,6 +1,17 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
-import { getArtistTopAlbums, getMusicDetail, searchMusic, searchMusicByTag } from "./lastfm.js";
+import { createDeezerClient, deezer as defaultDeezer } from "./deezer.js";
+import {
+  getArtistTopAlbums,
+  getMusicDetail,
+  searchMusic,
+  searchMusicByTag,
+  setDeezerClient,
+  trendingMusic,
+} from "./lastfm.js";
+
+const PLACEHOLDER = "https://lastfm.freetls.fastly.net/i/u/300x300/2a96cbd8b46e442fc41c2b86b821562f.png";
+const DEEZER_PICTURE = "https://cdn-images.dzcdn.net/images/artist/abc/1000x1000-000000-80-0-0.jpg";
 
 let originalFetch;
 let originalApiKey;
@@ -9,13 +20,33 @@ beforeEach(() => {
   originalFetch = globalThis.fetch;
   originalApiKey = process.env.LASTFM_API_KEY;
   process.env.LASTFM_API_KEY = "test";
+  // Deezer finds nothing unless a test says otherwise, and never reaches the network.
+  mockDeezer({});
 });
 
 afterEach(() => {
   globalThis.fetch = originalFetch;
+  setDeezerClient(defaultDeezer);
   if (originalApiKey === undefined) delete process.env.LASTFM_API_KEY;
   else process.env.LASTFM_API_KEY = originalApiKey;
 });
+
+// Answers Deezer requests by path ("/search/artist", "/album/7", ...) with a fresh cache.
+function mockDeezer(routes, options = {}) {
+  const calls = [];
+  setDeezerClient(createDeezerClient({
+    ...options,
+    fetch: async (input) => {
+      const url = new URL(input);
+      const { pathname } = url;
+      calls.push(pathname);
+      const route = routes[pathname];
+      if (typeof route === "function") return route(url);
+      return { ok: true, json: async () => route ?? { data: [] } };
+    },
+  }));
+  return calls;
+}
 
 function mockLastfm(responses, failedMethods = []) {
   const calls = [];
@@ -195,6 +226,36 @@ test("keeps a credit at exactly the listener share and drops one just below it",
   assert.deepEqual(await artistTitles("solo"), ["Solo", "Solo, Exactly", "Solo & Unknown", "Solo & Empty"]);
 });
 
+test("merges artist variants that differ only in case, accents or punctuation", async () => {
+  const calls = mockLastfm(artistSearch([
+    ["Beyonce", "40000"],
+    ["Guns N' Roses", "3000000"],
+    ["Beyoncé", "5000000"],
+    ["guns n roses", "20000"],
+    ["BEYONCE", undefined],
+  ]));
+
+  assert.deepEqual(await artistTitles("variants"), ["Beyoncé", "Guns N' Roses"]);
+  assert.equal(calls.filter((method) => method === "artist.getinfo").length, 2);
+});
+
+test("keeps the first artist variant when listener counts tie", async () => {
+  mockLastfm(artistSearch([["Beyonce", "100"], ["Beyoncé", "100"]]));
+
+  assert.deepEqual(await artistTitles("beyonce"), ["Beyonce"]);
+});
+
+test("keeps artists whose names still differ after normalising", async () => {
+  mockLastfm(artistSearch([
+    ["Radiohead", "6000000"],
+    ["Radiohead • Lossless", "3000"],
+    ["!!!", "400000"],
+    ["???", "1000"],
+  ]));
+
+  assert.deepEqual(await artistTitles("radiohead"), ["Radiohead", "Radiohead • Lossless", "!!!", "???"]);
+});
+
 test("leaves album and song results with combined artist names alone", async () => {
   mockLastfm({
     ...artistSearch([["Clairo", "2000000"]]),
@@ -280,6 +341,222 @@ test("asks Last.fm for the artist by name, separators and all", async () => {
 
   assert.deepEqual(await getArtistTopAlbums("artist|||Simon & Garfunkel"), []);
   assert.deepEqual(artists, ["Simon & Garfunkel"]);
+});
+
+test("gives an album on the artist's shelf its Deezer release year", async () => {
+  mockLastfm(topAlbums({ name: "Discovery", playcount: "9000", artist: { name: "Daft Punk" } }));
+  mockDeezer({
+    "/search/album": { data: [{ id: 302127, title: "Discovery", artist: { name: "Daft Punk" } }] },
+    "/album/302127": { release_date: "2001-03-07" },
+  });
+
+  const [album] = await getArtistTopAlbums("artist|||Daft Punk");
+  assert.equal(album.releaseYear, 2001);
+});
+
+test("replaces Last.fm's placeholder artist image with the Deezer photo, in results and detail", async () => {
+  mockLastfm({
+    ...artistSearch([["Daft Punk", "4000000"]]),
+    "artist.getinfo": {
+      artist: { name: "Daft Punk", stats: {}, image: [{ size: "extralarge", "#text": PLACEHOLDER }] },
+    },
+  });
+  mockDeezer({ "/search/artist": { data: [{ name: "Daft Punk", picture_xl: DEEZER_PICTURE }] } });
+
+  const [result] = await searchMusic("daft punk", "artist");
+  assert.equal(result.posterUrl, DEEZER_PICTURE);
+  assert.equal(result.releaseYear, null);
+  const detail = await getMusicDetail("artist|||Daft Punk");
+  assert.equal(detail.posterUrl, DEEZER_PICTURE);
+});
+
+test("keeps a real Last.fm artist image without asking Deezer", async () => {
+  mockLastfm({
+    ...artistSearch([["The Example", "3000"]]),
+    "artist.getinfo": {
+      artist: { name: "The Example", image: [{ size: "extralarge", "#text": "https://example.com/artist.jpg" }] },
+    },
+  });
+  const deezerCalls = mockDeezer({ "/search/artist": { data: [{ name: "The Example", picture_xl: DEEZER_PICTURE }] } });
+
+  const [result] = await searchMusic("example", "artist");
+  assert.equal(result.posterUrl, "https://example.com/artist.jpg");
+  assert.deepEqual(deezerCalls, []);
+});
+
+test("doesn't use the photo of an artist whose name only resembles the result", async () => {
+  mockLastfm({
+    ...artistSearch([["Prince", "3000000"]]),
+    "artist.getinfo": { artist: { name: "Prince", image: [{ size: "extralarge", "#text": PLACEHOLDER }] } },
+  });
+  mockDeezer({ "/search/artist": { data: [{ name: "Prince Royce", picture_xl: DEEZER_PICTURE }] } });
+
+  const [result] = await searchMusic("prince", "artist");
+  assert.equal(result.posterUrl, PLACEHOLDER);
+});
+
+test("gives song and album results and details their Deezer release year", async () => {
+  mockLastfm({
+    "album.search": { results: { albummatches: { album: { name: "OK Computer", artist: "Radiohead" } } } },
+    "album.getinfo": {
+      album: { name: "OK Computer", artist: { name: "Radiohead" }, listeners: "2000", playcount: "9000", image: [] },
+    },
+    "track.search": { results: { trackmatches: { track: { name: "Karma Police", artist: "Radiohead" } } } },
+    "track.getinfo": { track: { name: "Karma Police", artist: { name: "Radiohead" } } },
+  });
+  mockDeezer({
+    "/search/album": { data: [{ id: 1, title: "OK Computer", artist: { name: "Radiohead" } }] },
+    "/album/1": { release_date: "1997-06-17" },
+    "/search": { data: [{ id: 2, title: "Karma Police", artist: { name: "Radiohead" }, album: { id: 1 } }] },
+  });
+
+  const results = await searchMusic("radiohead");
+  assert.deepEqual(results.map((item) => [item.musicKind, item.releaseYear]), [["album", 1997], ["song", 1997]]);
+  assert.equal((await getMusicDetail("album|||Radiohead|||OK Computer")).releaseYear, 1997);
+  assert.equal((await getMusicDetail("song|||Radiohead|||Karma Police")).releaseYear, 1997);
+});
+
+test("fills years on tag search and trending songs too", async () => {
+  mockLastfm({
+    "tag.search": { results: { tagmatches: { tag: { name: "indie" } } } },
+    "tag.gettoptracks": { toptracks: { track: { name: "Karma Police", artist: { name: "Radiohead" } } } },
+    "chart.gettoptracks": { tracks: { track: { name: "Karma Police", artist: { name: "Radiohead" } } } },
+  });
+  mockDeezer({
+    "/search": { data: [{ id: 2, title: "Karma Police", artist: { name: "Radiohead" }, album: { id: 1 } }] },
+    "/album/1": { release_date: "1997-06-17" },
+  });
+
+  assert.equal((await searchMusicByTag("indie", "song"))[0].releaseYear, 1997);
+  assert.equal((await trendingMusic())[0].releaseYear, 1997);
+});
+
+test("a Deezer that is down or never answers leaves music search as it was, within the timeout", async () => {
+  mockLastfm({
+    ...artistSearch([["Daft Punk", "4000000"]]),
+    "track.search": { results: { trackmatches: { track: { name: "One More Time", artist: "Daft Punk" } } } },
+  });
+  const expected = [
+    ["artist", "Daft Punk", null, null],
+    ["song", "One More Time", null, null],
+  ];
+  const summary = (results) => results.map((item) => [item.musicKind, item.title, item.releaseYear, item.posterUrl]);
+
+  mockDeezer({
+    "/search/artist": () => ({ ok: false, status: 503, json: async () => ({}) }),
+    "/search": () => ({ ok: true, json: async () => ({ error: { code: 4, message: "Quota limit exceeded" } }) }),
+  });
+  assert.deepEqual(summary(await searchMusic("daft punk")), expected);
+
+  mockDeezer({ "/search/artist": () => new Promise(() => {}), "/search": () => new Promise(() => {}) }, { timeoutMs: 50 });
+  const started = Date.now();
+  assert.deepEqual(summary(await searchMusic("daft punk")), expected);
+  assert.ok(Date.now() - started < 500, "a hanging Deezer must not hold up the search past its timeout");
+});
+
+// A cold "all" search shaped like a live "Daft Punk" one: 1 artist, 12 albums (one Deezer
+// doesn't know) and 12 songs (one Deezer doesn't know), the songs all on album cards.
+// Fetching each card's album or track separately would take 1 + 12 + 11 + 12 + 11 = 47
+// requests; sharing album fetches takes 1 + 12 + 11 + 12 = 36.
+const DEEZER_ALBUMS = {
+  Discovery: [1, "2001"], Homework: [2, "1997"], "Random Access Memories": [3, "2013"],
+  "Human After All": [4, "2005"], "TRON: Legacy": [5, "2010"], "Alive 2007": [6, "2007"],
+  "Daft Club": [7, "2003"], "Random Access Memories (10th Anniversary Edition)": [8, "2023"],
+  "Musique Vol 1": [9, "2006"], "TRON: Legacy Reconfigured": [10, "2011"], "Alive 1997": [11, "2001"],
+};
+const LASTFM_ONLY_ALBUM = "Get Lucky";
+const SONG_ALBUMS = {
+  "Da Funk": "Homework", Aerodynamic: "Discovery", Voyager: "Discovery", Crescendolls: "Discovery",
+  Technologic: "Human After All", Superheroes: "Discovery", Nightvision: "Discovery",
+  "Digital Love": "Discovery", "Veridis Quo": "Discovery", Within: "Random Access Memories",
+  Contact: "Random Access Memories",
+};
+const LASTFM_ONLY_SONG = "Rollin' & Scratchin' (Live Bootleg)";
+
+function mockDaftPunkLastfm() {
+  globalThis.fetch = async (input) => {
+    const params = new URL(input).searchParams;
+    const body = {
+      "artist.search": { results: { artistmatches: { artist: { name: "Daft Punk", listeners: "4000000", image: [] } } } },
+      "album.search": {
+        results: {
+          albummatches: {
+            album: [...Object.keys(DEEZER_ALBUMS), LASTFM_ONLY_ALBUM].map((name) => ({ name, artist: "Daft Punk" })),
+          },
+        },
+      },
+      "album.getinfo": { album: { name: params.get("album"), artist: "Daft Punk", listeners: "5000", playcount: "9000", image: [] } },
+      "track.search": {
+        results: {
+          trackmatches: {
+            track: [...Object.keys(SONG_ALBUMS), LASTFM_ONLY_SONG].map((name) => ({ name, artist: "Daft Punk" })),
+          },
+        },
+      },
+    }[params.get("method")];
+    return { ok: true, json: async () => body ?? {} };
+  };
+}
+
+function daftPunkDeezerRoutes() {
+  const titleFrom = (url) => url.searchParams.get("q").replace(/^Daft Punk /, "");
+  const json = (body) => ({ ok: true, json: async () => body });
+  const routes = {
+    "/search/artist": { data: [{ name: "Daft Punk", picture_xl: DEEZER_PICTURE }] },
+    "/search/album": (url) => {
+      const album = DEEZER_ALBUMS[titleFrom(url)];
+      return json({ data: album ? [{ id: album[0], title: titleFrom(url), artist: { name: "Daft Punk" } }] : [] });
+    },
+    "/search": (url) => {
+      const album = DEEZER_ALBUMS[SONG_ALBUMS[titleFrom(url)]];
+      return json({ data: album ? [{ id: 99, title: titleFrom(url), artist: { name: "Daft Punk" }, album: { id: album[0] } }] : [] });
+    },
+  };
+  for (const [id, year] of Object.values(DEEZER_ALBUMS)) routes[`/album/${id}`] = { release_date: `${year}-01-01` };
+  return routes;
+}
+
+function expectedYear(item) {
+  const album = item.musicKind === "song" ? SONG_ALBUMS[item.title] : item.title;
+  return DEEZER_ALBUMS[album] ? Number(DEEZER_ALBUMS[album][1]) : null;
+}
+
+test("a cold all-kinds search stays within Deezer's budget and gives every matched card its year", async () => {
+  mockDaftPunkLastfm();
+  const calls = mockDeezer(daftPunkDeezerRoutes(), { now: () => 0 });
+
+  const results = await searchMusic("daft punk");
+
+  assert.equal(calls.length, 36);
+  assert.equal(results.length, 25);
+  assert.equal(results[0].posterUrl, DEEZER_PICTURE);
+  for (const item of results.slice(1)) assert.equal(item.releaseYear, expectedYear(item), item.title);
+  const albumFetches = calls.filter((path) => path.startsWith("/album/"));
+  assert.equal(new Set(albumFetches).size, albumFetches.length, "each album is fetched once");
+});
+
+test("cards whose lookups don't fit the budget keep their Last.fm output, and get years on later searches", async () => {
+  mockDaftPunkLastfm();
+  mockDeezer({});
+  const lastfmOnly = await searchMusic("daft punk");
+
+  let clock = 0;
+  const calls = mockDeezer(daftPunkDeezerRoutes(), { now: () => clock, requestBudget: 20 });
+  const first = await searchMusic("daft punk");
+
+  assert.equal(calls.length, 20);
+  assert.deepEqual(first.map((item) => item.id), lastfmOnly.map((item) => item.id));
+  const skipped = first.filter((item) => item.musicKind !== "artist" && item.releaseYear !== expectedYear(item));
+  assert.ok(skipped.length > 0, "the small budget should leave some cards without a year");
+  for (const item of skipped) assert.deepEqual(item, lastfmOnly.find((card) => card.id === item.id));
+
+  // Skipped lookups aren't remembered, so each later search fills in the next 20 requests' worth.
+  let later;
+  for (let window = 1; window <= 3; window += 1) {
+    clock = window * 5000;
+    later = await searchMusic("daft punk");
+  }
+  for (const item of later.slice(1)) assert.equal(item.releaseYear, expectedYear(item), item.title);
 });
 
 test("rejects ids that aren't an artist without calling Last.fm", async () => {

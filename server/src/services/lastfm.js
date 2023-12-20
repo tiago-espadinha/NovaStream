@@ -1,3 +1,4 @@
+import { deezer as defaultDeezer, normalizeName } from "./deezer.js";
 import { buildId } from "./normalize.js";
 import { ProviderError, upstreamFailure } from "./providerError.js";
 
@@ -20,6 +21,15 @@ const CREDIT_LISTENER_SHARE = 0.1;
 // titles, so more are requested than shown.
 const ARTIST_ALBUM_LIMIT = 12;
 const ARTIST_ALBUM_POOL = 30;
+// Last.fm stopped serving artist photos and returns this grey star image in their place.
+const LASTFM_PLACEHOLDER_IMAGE = "2a96cbd8b46e442fc41c2b86b821562f";
+
+let deezer = defaultDeezer;
+
+/** Swaps the Deezer client; tests give each case a fresh one so caches don't carry over. */
+export function setDeezerClient(client) {
+  deezer = client;
+}
 
 function key() {
   const k = process.env.LASTFM_API_KEY;
@@ -234,16 +244,31 @@ function withoutCombinedCredits(matches) {
   });
 }
 
+// Keeps one match per name that normalizeName makes equal ("Beyoncé" and "Beyonce"):
+// the one with the most listeners, in the place of the first variant. A name with no
+// letters or digits left after normalising is never merged.
+function withoutNameVariants(matches) {
+  const byName = new Map();
+  for (const match of matches) {
+    const key = normalizeName(match.name) || match;
+    const kept = byName.get(key);
+    if (!kept || (numericCount(match.listeners) ?? 0) > (numericCount(kept.listeners) ?? 0)) {
+      byName.set(key, match);
+    }
+  }
+  return [...byName.values()];
+}
+
 async function searchArtists(query) {
   const data = await lastfmFetch({
     method: "artist.search",
     artist: query,
     limit: RESULT_LIMIT,
   });
-  const matches = withoutCombinedCredits(
+  const matches = withoutNameVariants(withoutCombinedCredits(
     toArray(extractMatches(data, "results.artistmatches.artist"))
       .filter((artist) => artist?.name),
-  );
+  ));
   return Promise.all(matches.map(async (match) => {
     let artist = match;
     try {
@@ -337,7 +362,7 @@ export async function trendingMusic() {
   const matches = toArray(extractMatches(data, "tracks.track"))
     .filter((track) => track?.name)
     .slice(0, TRENDING_TRACK_LIMIT); // each match costs one enrichment request
-  return Promise.all(matches.map(songFromMatch));
+  return withDeezerDetailsAll(await Promise.all(matches.map(songFromMatch)));
 }
 
 export async function searchMusic(query, kind = "all") {
@@ -346,9 +371,9 @@ export async function searchMusic(query, kind = "all") {
     album: () => searchAlbums(query),
     song: () => searchSongs(query),
   };
-  if (kind !== "all") return searchers[kind]();
+  if (kind !== "all") return withDeezerDetailsAll(await searchers[kind]());
   const groups = await Promise.all(Object.values(searchers).map((search) => search()));
-  return groups.flat();
+  return withDeezerDetailsAll(groups.flat());
 }
 
 export async function searchMusicByTag(tag, kind = "album") {
@@ -427,10 +452,14 @@ export async function searchMusicByTag(tag, kind = "album") {
       };
     });
   }));
-  return groups.flat();
+  return withDeezerDetailsAll(groups.flat());
 }
 
 export async function getMusicDetail(compositeId) {
+  return withDeezerDetails(await lastfmDetail(compositeId));
+}
+
+async function lastfmDetail(compositeId) {
   const parts = compositeId.split("|||");
   const isLegacyAlbumId = parts.length === 2 && parts[0] !== "artist";
   const kind = isLegacyAlbumId ? "album" : parts[0];
@@ -520,7 +549,7 @@ export async function getArtistTopAlbums(compositeId) {
     limit: ARTIST_ALBUM_POOL,
   });
   const seen = new Set();
-  return toArray(data.topalbums?.album)
+  const albums = toArray(data.topalbums?.album)
     .filter((album) => album?.name?.trim() && album.name.trim() !== "(null)")
     .sort((a, b) => (numericCount(b.playcount) ?? 0) - (numericCount(a.playcount) ?? 0))
     .filter((album) => {
@@ -545,6 +574,7 @@ export async function getArtistTopAlbums(compositeId) {
         artist: albumArtist,
       };
     });
+  return withDeezerDetailsAll(albums);
 }
 
 function artistDetail(artist, compositeId) {
@@ -602,6 +632,30 @@ function songDetail(track, requestedArtist, requestedTitle, compositeId) {
     posterUrl: bestImage(track.album?.image || track.image),
     ...(stats ? { playStats: stats } : {}),
   };
+}
+
+function isPlaceholderImage(url) {
+  return !url || url.includes(LASTFM_PLACEHOLDER_IMAGE);
+}
+
+// Fills what Last.fm lacks from Deezer: a photo for artists still showing the placeholder,
+// and a release year for albums and songs. A lookup that finds nothing leaves the item as is.
+async function withDeezerDetails(item) {
+  if (item.musicKind === "artist") {
+    if (!isPlaceholderImage(item.posterUrl)) return item;
+    const picture = await deezer.artistPicture(item.title);
+    return picture ? { ...item, posterUrl: picture } : item;
+  }
+  if (item.releaseYear != null) return item;
+  const findYear = { album: deezer.albumYear, song: deezer.songYear }[item.musicKind];
+  const artist = item.artist ?? item.creator;
+  if (!findYear || !artist) return item;
+  const releaseYear = await findYear(artist, item.title);
+  return releaseYear ? { ...item, releaseYear } : item;
+}
+
+function withDeezerDetailsAll(items) {
+  return Promise.all(items.map(withDeezerDetails));
 }
 
 function toArray(value) {
