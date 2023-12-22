@@ -423,7 +423,7 @@ export default function App() {
             <h2 id="intro-title">Find your next obsession.</h2>
             <p>
               Search across movies, shows, music, books and games. Results come from live TMDb,
-              Last.fm, Open Library, and RAWG data.
+              Last.fm, Deezer, Open Library, and RAWG data.
             </p>
           </section>
         )}
