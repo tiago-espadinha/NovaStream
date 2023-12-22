@@ -1366,6 +1366,61 @@ main:focus {
   font-size: var(--font-size-small);
   text-align: center;
 }
+.site-footer p {
+  margin: 0;
+}
+.site-footer strong {
+  color: var(--color-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.footer-developer {
+  font-size: var(--font-size-control);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2) var(--space-4);
+}
+.footer-social {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.footer-social-link {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-pill);
+  color: var(--color-text-muted);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+.footer-social-link:hover {
+  background: var(--color-surface-glass);
+  color: var(--color-primary);
+}
+.footer-icon {
+  width: 20px;
+  height: 20px;
+}
+.site-footer .footer-sources {
+  max-width: 68ch;
+  margin: var(--space-3) auto 0;
+  line-height: 1.6;
+}
+.footer-sources a {
+  color: var(--color-text);
+  white-space: nowrap;
+  text-decoration-color: var(--color-border-strong);
+  text-underline-offset: 2px;
+}
+.footer-sources a:hover {
+  color: var(--color-primary);
+  text-decoration-color: currentColor;
+}
 
 /* media detail overlay */
 .detail-backdrop {
