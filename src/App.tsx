@@ -19,6 +19,7 @@ import { Shelf } from './components/Shelf';
 import { Spotlight } from './components/Spotlight';
 import { FilterDialog } from './components/FilterDialog';
 import { KeywordChip } from './components/KeywordChip';
+import { SiteFooter } from './components/SiteFooter';
 import { StatusIcon } from './components/StatusIcon';
 import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
@@ -423,7 +424,7 @@ export default function App() {
             <h2 id="intro-title">Find your next obsession.</h2>
             <p>
               Search across movies, shows, music, books and games. Results come from live TMDb,
-              Last.fm, Open Library, and RAWG data.
+              Last.fm, Deezer, Open Library, and RAWG data.
             </p>
           </section>
         )}
@@ -622,7 +623,7 @@ export default function App() {
       </main>
       )}
 
-      <footer className="site-footer">Nova Stream — a React + TypeScript frontend with a real API-backed server.</footer>
+      <SiteFooter />
 
       {selectedId && (
         <>
