@@ -19,6 +19,7 @@ import { Shelf } from './components/Shelf/Shelf';
 import { Spotlight } from './screens/home/Spotlight';
 import { FilterDialog } from './screens/home/FilterDialog';
 import { KeywordChip } from './components/KeywordChip/KeywordChip';
+import { SiteFooter } from './components/SiteFooter/SiteFooter';
 import { StatusIcon } from './components/StatusIcon/StatusIcon';
 import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
@@ -33,7 +34,6 @@ import {
 } from './utils/contentFilters';
 import './screens/home/HomeScreen.css';
 import './screens/home/ResultsSection.css';
-import './components/SiteFooter/SiteFooter.css';
 
 const ALL_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 const FAVORITES_SHELF_LIMIT = 8;
@@ -428,8 +428,8 @@ export default function App() {
               <p className="eyebrow">Live discovery</p>
               <h2 id="intro-title">Find your next obsession.</h2>
               <p>
-                Search across movies, shows, music, books and games. Results come from live TMDb, Last.fm, Open Library,
-                and RAWG data.
+                Search across movies, shows, music, books and games. Results come from live TMDb, Last.fm, Deezer, Open
+                Library, and RAWG data.
               </p>
             </section>
           )}
@@ -630,9 +630,7 @@ export default function App() {
         </main>
       )}
 
-      <footer className="site-footer">
-        Nova Stream — a React + TypeScript frontend with a real API-backed server.
-      </footer>
+      <SiteFooter />
 
       {selectedId && (
         <>
