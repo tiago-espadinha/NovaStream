@@ -19,6 +19,7 @@ import { Shelf } from './components/Shelf/Shelf';
 import { Spotlight } from './screens/home/Spotlight';
 import { FilterDialog } from './screens/home/FilterDialog';
 import { KeywordChip } from './components/KeywordChip/KeywordChip';
+import { SiteFooter } from './components/SiteFooter/SiteFooter';
 import { StatusIcon } from './components/StatusIcon/StatusIcon';
 import { groupByType, mixAcrossTypes, pickSpotlight, sampleStable } from './utils/discovery';
 import { reuseAllResults, type AllSearch } from './utils/searchReuse';
@@ -629,9 +630,7 @@ export default function App() {
         </main>
       )}
 
-      <footer className="site-footer">
-        Nova Stream — a React + TypeScript frontend with a real API-backed server.
-      </footer>
+      <SiteFooter />
 
       {selectedId && (
         <>
