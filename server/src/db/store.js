@@ -48,6 +48,12 @@ export function createFileBackend(dbPath = DEFAULT_DB_PATH) {
       data.users[idx] = user;
       writeRaw(data);
     },
+    async removeUser(user) {
+      const data = readRaw();
+      const remaining = data.users.filter((u) => u.id !== user.id);
+      if (remaining.length === data.users.length) return;
+      writeRaw({ ...data, users: remaining });
+    },
   };
 }
 
@@ -84,8 +90,13 @@ export function createRedisBackend({ url, token, fetchImpl = fetch }) {
       await command('SET', userKey(user.id), JSON.stringify(user));
       return true;
     },
+    // XX: only overwrite an existing record, so a write racing a deletion can't bring it back.
     async putUser(user) {
-      await command('SET', userKey(user.id), JSON.stringify(user));
+      await command('SET', userKey(user.id), JSON.stringify(user), 'XX');
+    },
+    // One DEL for both keys, so a failure can't leave the email claimed by a missing account.
+    async removeUser(user) {
+      await command('DEL', userKey(user.id), emailIndexKey(user.email));
     },
   };
 }
@@ -131,9 +142,25 @@ export function createStore(backend) {
       await backend.putUser(user);
       return user.savedMedia;
     },
+
+    /** Removes the account with everything stored on it; resolves to false when it didn't exist. */
+    async deleteUser(id) {
+      const user = await backend.getUser(id);
+      if (!user) return false;
+      await backend.removeUser(user);
+      return true;
+    },
   };
 }
 
 const store = createStore(backendFromEnv());
 
-export const { findUserByEmail, findUserById, createUser, updateUser, addSavedMedia, removeSavedMedia } = store;
+export const {
+  findUserByEmail,
+  findUserById,
+  createUser,
+  updateUser,
+  addSavedMedia,
+  removeSavedMedia,
+  deleteUser,
+} = store;

@@ -4,27 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { createFileBackend, createRedisBackend, createStore } from './store.js';
-
-// Answers GET/SET (with NX) the way Upstash's REST endpoint does, from an in-memory map.
-function fakeUpstash() {
-  const data = new Map();
-  const calls = [];
-  const fetchImpl = async (_url, init) => {
-    calls.push(init);
-    const [cmd, key, value, flag] = JSON.parse(init.body);
-    let result = null;
-    if (cmd === 'GET') result = data.get(key) ?? null;
-    if (cmd === 'SET') {
-      if (flag === 'NX' && data.has(key)) result = null;
-      else {
-        data.set(key, value);
-        result = 'OK';
-      }
-    }
-    return { ok: true, json: async () => ({ result }) };
-  };
-  return { data, calls, fetchImpl };
-}
+import { fakeUpstash } from './fakeUpstash.js';
 
 const user = (overrides = {}) => ({
   id: 'u1',
@@ -79,7 +59,71 @@ for (const [name, makeBackend] of Object.entries(backends)) {
     assert.equal(await store.addSavedMedia('missing', { id: 'm1' }), null);
     assert.equal(await store.removeSavedMedia('missing', 'm1'), null);
   });
+
+  test(`${name}: deletes a user with their data and frees the email`, async () => {
+    const store = createStore(makeBackend());
+    await store.createUser(user());
+    await store.createUser(user({ id: 'u2', email: 'grace@example.com', name: 'Grace' }));
+    await store.addSavedMedia('u1', { id: 'm1', title: 'Dune' });
+    await store.updateUser('u1', { collections: { custom: [], assignments: {}, media: {} } });
+
+    assert.equal(await store.deleteUser('u1'), true);
+    assert.equal(await store.findUserById('u1'), null);
+    assert.equal(await store.findUserByEmail('ADA@example.com'), null);
+    assert.equal(await store.deleteUser('u1'), false);
+    assert.equal(await store.deleteUser('missing'), false);
+
+    assert.equal((await store.findUserById('u2')).name, 'Grace');
+    assert.equal((await store.findUserByEmail('grace@example.com')).id, 'u2');
+
+    const again = user({ id: 'u3', email: 'ada@example.com' });
+    assert.deepEqual(await store.createUser(again), again);
+    assert.deepEqual((await store.findUserById('u3')).savedMedia, []);
+  });
 }
+
+for (const [name, makeBackend] of Object.entries(backends)) {
+  test(`${name}: a write that lands after a deletion does not bring the user back`, async () => {
+    const backend = makeBackend();
+    const store = createStore(backend);
+    await store.createUser(user());
+    const stale = await backend.getUser('u1');
+    await store.deleteUser('u1');
+    await backend.putUser({ ...stale, savedMedia: [{ id: 'm1', title: 'Dune' }] });
+    assert.equal(await store.findUserById('u1'), null);
+  });
+}
+
+test('file: deleting a user leaves no trace of them in the file', async () => {
+  const dbPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nova-store-')), 'data.json');
+  const store = createStore(createFileBackend(dbPath));
+  await store.createUser(user({ savedMedia: [{ id: 'm1', title: 'Dune' }] }));
+  await store.deleteUser('u1');
+  const raw = fs.readFileSync(dbPath, 'utf-8');
+  assert.deepEqual(JSON.parse(raw), { users: [] });
+});
+
+test('redis: deletes the record and the email index in one command', async () => {
+  const upstash = fakeUpstash();
+  const store = createStore(createRedisBackend({ url: 'https://redis.test', token: 't', fetchImpl: upstash.fetchImpl }));
+  await store.createUser(user());
+  await store.createUser(user({ id: 'u2', email: 'grace@example.com' }));
+  await store.deleteUser('u1');
+  assert.deepEqual(JSON.parse(upstash.calls.at(-1).body), ['DEL', 'user:u1', 'user-email:ada@example.com']);
+  assert.deepEqual([...upstash.data.keys()].sort(), ['user-email:grace@example.com', 'user:u2']);
+});
+
+test('redis: a failed delete rejects instead of reporting success', async () => {
+  const upstash = fakeUpstash();
+  const fetchImpl = async (url, init) =>
+    JSON.parse(init.body)[0] === 'DEL'
+      ? { ok: false, status: 500, json: async () => ({ error: 'ERR busy' }) }
+      : upstash.fetchImpl(url, init);
+  const store = createStore(createRedisBackend({ url: 'https://redis.test', token: 't', fetchImpl }));
+  await store.createUser(user());
+  await assert.rejects(store.deleteUser('u1'), /ERR busy/);
+  assert.equal((await store.findUserById('u1')).id, 'u1');
+});
 
 test('redis: sends commands as an authorized JSON array', async () => {
   const upstash = fakeUpstash();
