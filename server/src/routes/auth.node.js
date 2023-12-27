@@ -182,3 +182,70 @@ test('password change: only ever changes the signed-in account', async () => {
   assert.equal((await findUserById('u2')).passwordHash, grace.passwordHash);
   assert.equal(await verifyPassword('brand new pass', (await findUserById('u1')).passwordHash), true);
 });
+
+const deleteAccount = (token, body) => call('DELETE', '/api/auth/account', { token, body });
+
+test('account deletion: requires a valid session', async () => {
+  await seedUser();
+  for (const token of [undefined, 'not-a-jwt', signToken({ sub: 'u1', ver: 1 }), signToken({ sub: 'gone' })]) {
+    assert.equal((await deleteAccount(token, { password: PASSWORD })).status, 401);
+  }
+  assert.equal((await findUserById('u1')).savedMedia.length, 1);
+});
+
+test('account deletion: a missing or wrong password keeps the account and the session', async () => {
+  await seedUser();
+  const token = signToken({ sub: 'u1', ver: 0 });
+  for (const body of [undefined, {}, { password: '' }, { password: 42 }]) {
+    const res = await deleteAccount(token, body);
+    assert.deepEqual([res.status, res.body.error], [400, 'Enter your password to delete your account.']);
+  }
+  const wrong = await deleteAccount(token, { password: 'not my password' });
+  assert.deepEqual([wrong.status, wrong.body.code], [403, 'wrong_password']);
+
+  const user = await findUserById('u1');
+  assert.equal(user.savedMedia.length, 1);
+  assert.deepEqual(user.collections, { custom: [], assignments: {}, media: {} });
+  assert.equal((await call('GET', '/api/auth/me', { token })).status, 200);
+});
+
+test('account deletion: removes the account and its data, and ends the session everywhere', async () => {
+  await seedUser();
+  const token = signToken({ sub: 'u1', ver: 0 });
+  const res = await deleteAccount(token, { password: PASSWORD });
+  assert.equal(res.status, 204);
+
+  assert.equal(await findUserById('u1'), null);
+  assert.deepEqual([...upstash.data.keys()], []);
+  for (const [method, path, body] of accountRequests) {
+    assert.equal((await call(method, path, { token, body })).status, 401, `${method} ${path}`);
+  }
+  assert.equal(await findUserById('u1'), null);
+  assert.equal((await deleteAccount(token, { password: PASSWORD })).status, 401);
+  assert.equal((await login(PASSWORD)).status, 401);
+});
+
+test('account deletion: the email can register again as a fresh account', async () => {
+  await seedUser();
+  await deleteAccount(signToken({ sub: 'u1', ver: 0 }), { password: PASSWORD });
+  const res = await call('POST', '/api/auth/register', { body: { email: 'ada@example.com', password: 'another pass' } });
+  assert.equal(res.status, 201);
+  assert.notEqual(res.body.user.id, 'u1');
+  assert.deepEqual(res.body.user.savedMedia, []);
+  assert.equal('collections' in res.body.user, false);
+});
+
+test('account deletion: only ever deletes the signed-in account', async () => {
+  await seedUser();
+  await seedUser({ id: 'u2', email: 'grace@example.com', name: 'Grace' });
+  const res = await deleteAccount(signToken({ sub: 'u1', ver: 0 }), {
+    password: PASSWORD,
+    id: 'u2',
+    email: 'grace@example.com',
+  });
+  assert.equal(res.status, 204);
+  assert.equal(await findUserById('u1'), null);
+  const grace = await findUserById('u2');
+  assert.equal(grace.savedMedia.length, 1);
+  assert.equal((await login(PASSWORD, 'grace@example.com')).status, 200);
+});

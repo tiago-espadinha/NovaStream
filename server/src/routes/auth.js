@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { createUser, findUserByEmail, updateCredentials, updateUser } from '../db/store.js';
+import { createUser, deleteUser, findUserByEmail, updateCredentials, updateUser } from '../db/store.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { findSessionUser, requireAuth, sessionEnded, sessionToken } from '../middleware/auth.js';
 import { parseCredentials, parsePasswordChange, parsePreferences } from '../utils/validate.js';
@@ -88,4 +88,18 @@ authRouter.put('/password', requireAuth, asyncRoute(async (req, res) => {
   });
   if (!updated) return sessionEnded(res);
   res.json({ token: sessionToken(updated), user: toPublicUser(updated) });
+}));
+
+// Saved titles and collections live on the user record, so deleting it removes them too.
+authRouter.delete('/account', requireAuth, asyncRoute(async (req, res) => {
+  const user = await findSessionUser(req);
+  if (!user) return sessionEnded(res);
+  const { password } = req.body || {};
+  if (typeof password !== 'string' || !password) {
+    return res.status(400).json({ error: 'Enter your password to delete your account.' });
+  }
+  if (!(await verifyPassword(password, user.passwordHash))) return wrongPassword(res);
+
+  await deleteUser(user.id);
+  res.status(204).end();
 }));

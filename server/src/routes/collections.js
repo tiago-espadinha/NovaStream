@@ -23,5 +23,6 @@ collectionsRouter.put('/', asyncRoute(async (req, res) => {
   const { value, error } = parseCollections(req.body);
   if (error) return res.status(400).json({ error });
   const updated = await updateUser(req.userId, { collections: value });
+  if (!updated) return sessionEnded(res);
   res.json({ collections: updated.collections });
 }));
