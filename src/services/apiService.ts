@@ -11,11 +11,12 @@ import type {
 import type { CollectionsDoc } from '../utils/collections';
 
 export type ProviderErrorCode = 'not_configured' | 'not_found' | 'timeout' | 'unavailable';
+export type ApiErrorCode = ProviderErrorCode | 'wrong_password';
 
 export class ApiError extends Error {
   status: number;
-  code?: ProviderErrorCode;
-  constructor(status: number, message: string, code?: ProviderErrorCode) {
+  code?: ApiErrorCode;
+  constructor(status: number, message: string, code?: ApiErrorCode) {
     super(message);
     this.status = status;
     this.code = code;
@@ -109,6 +110,19 @@ export function updatePreferences(token: string, patch: Partial<UserPreferences>
     { method: 'PATCH', body: JSON.stringify(patch) },
     token,
   );
+}
+
+/** Ends every other session; the response carries this device's replacement token. */
+export function changePassword(token: string, currentPassword: string, newPassword: string) {
+  return request<AuthResponse>(
+    '/auth/password',
+    { method: 'PUT', body: JSON.stringify({ currentPassword, newPassword }) },
+    token,
+  );
+}
+
+export function deleteAccount(token: string, password: string) {
+  return request<void>('/auth/account', { method: 'DELETE', body: JSON.stringify({ password }) }, token);
 }
 
 // ---- saved media ----
