@@ -172,6 +172,26 @@
     color: var(--color-text-muted);
     cursor: progress;
   }
+  .account-button-user {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding-inline: var(--space-3) var(--space-4);
+  }
+  .account-icon {
+    flex: none;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+  }
+  .account-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
   .header-types {
     display: flex;
     align-items: center;
