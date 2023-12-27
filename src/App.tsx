@@ -3,6 +3,7 @@ import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
 import { MediaDetail } from './components/MediaDetail';
 import { LoginModal } from './components/LoginModal';
+import { AccountSettings } from './components/AccountSettings';
 import { AccountNotices, type AccountNotice } from './components/AccountNotices';
 import { DetailStatus } from './components/DetailStatus';
 import { SavedPage } from './components/SavedPage';
@@ -66,6 +67,8 @@ export default function App() {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [accountDeleted, setAccountDeleted] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<ContentType[]>(ALL_TYPES);
   const [selectedGenres, setSelectedGenres] = useState<GenreSelection[]>([]);
@@ -94,7 +97,13 @@ export default function App() {
   // The trail entry Back last returned to; its albums and opened card are reused on return.
   const [returnedTo, setReturnedTo] = useState<DetailTrailEntry | null>(null);
 
-  const { user, status: sessionStatus, logout, refreshUser, sessionNotice, clearSessionNotice } = useAuth();
+  const { user, status: sessionStatus, refreshUser, sessionNotice, clearSessionNotice } = useAuth();
+
+  // Signing out anywhere (another tab, an expired session) closes account settings for good,
+  // rather than leaving them open or reopening them at the next sign-in.
+  useEffect(() => {
+    if (sessionStatus === 'signedOut') setAccountModalOpen(false);
+  }, [sessionStatus]);
   const favorites = useFavorites();
   const { isFavorite, toggleFavorite, savedMedia } = favorites;
   const collectionsState = useCollections();
@@ -338,6 +347,14 @@ export default function App() {
       onDismiss: clearSessionNotice,
     });
   }
+  if (accountDeleted) {
+    accountNotices.push({
+      id: 'account-deleted',
+      message: 'Your account was deleted, with its saved titles and collections.',
+      tone: 'success',
+      onDismiss: () => setAccountDeleted(false),
+    });
+  }
   if (favorites.notice) {
     accountNotices.push({
       id: 'favorites',
@@ -378,7 +395,7 @@ export default function App() {
         user={user}
         sessionStatus={sessionStatus}
         onOpenAuth={() => setAuthModalOpen(true)}
-        onLogout={logout}
+        onOpenAccount={() => setAccountModalOpen(true)}
         savedPage={isSavedPage}
       />
 
@@ -667,6 +684,15 @@ export default function App() {
       )}
 
       {authModalOpen && <LoginModal onClose={() => setAuthModalOpen(false)} />}
+      {accountModalOpen && sessionStatus !== 'signedOut' && (
+        <AccountSettings
+          onClose={() => setAccountModalOpen(false)}
+          onDeleted={() => {
+            setAccountModalOpen(false);
+            setAccountDeleted(true);
+          }}
+        />
+      )}
     </>
   );
 }

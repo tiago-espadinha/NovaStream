@@ -23,6 +23,10 @@ interface AuthContextValue {
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
+  /** Rejects with the API error; on success this device stays signed in and others are signed out. */
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  /** Rejects with the API error; on success the session ends. */
+  deleteAccount: (password: string) => Promise<void>;
   refreshUser: () => Promise<void>;
   /** Call when an account request answers 401: signs out and explains why (optionally, what didn't happen). */
   endSession: (message?: string) => void;
@@ -143,6 +147,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [authenticate],
   );
 
+  const changePassword = useCallback(
+    async (currentPassword: string, newPassword: string) => {
+      if (!token) throw new Error('Not signed in');
+      const res = await api.changePassword(token, currentPassword, newPassword);
+      startSession(res.token, res.user);
+    },
+    [token, startSession],
+  );
+
+  const deleteAccount = useCallback(
+    async (password: string) => {
+      if (!token) throw new Error('Not signed in');
+      await api.deleteAccount(token, password);
+      clearSession();
+    },
+    [token, clearSession],
+  );
+
   const clearSessionNotice = useCallback(() => setSessionNotice(null), []);
 
   const value = useMemo(
@@ -156,11 +178,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout: clearSession,
+      changePassword,
+      deleteAccount,
       refreshUser,
       endSession,
       clearSessionNotice,
     }),
-    [user, token, status, loading, error, sessionNotice, login, register, clearSession, refreshUser, endSession, clearSessionNotice],
+    [
+      user,
+      token,
+      status,
+      loading,
+      error,
+      sessionNotice,
+      login,
+      register,
+      clearSession,
+      changePassword,
+      deleteAccount,
+      refreshUser,
+      endSession,
+      clearSessionNotice,
+    ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

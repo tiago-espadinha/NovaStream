@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { addSavedMedia, findUserById, removeSavedMedia } from '../db/store.js';
-import { requireAuth, sessionEnded } from '../middleware/auth.js';
+import { addSavedMedia, removeSavedMedia } from '../db/store.js';
+import { findSessionUser, requireAuth, sessionEnded } from '../middleware/auth.js';
 import { MAX_SAVED_MEDIA, parseMediaSnapshot } from '../utils/validate.js';
 import { asyncRoute } from '../utils/asyncRoute.js';
 
@@ -8,7 +8,7 @@ export const savedRouter = Router();
 savedRouter.use(requireAuth);
 
 savedRouter.get('/', asyncRoute(async (req, res) => {
-  const user = await findUserById(req.userId);
+  const user = await findSessionUser(req);
   if (!user) return sessionEnded(res);
   res.json({ savedMedia: user.savedMedia });
 }));
@@ -17,7 +17,7 @@ savedRouter.get('/', asyncRoute(async (req, res) => {
 // so the saved list can render without an extra round trip; re-fetch /api/media for
 // fresh details when the user opens it.
 savedRouter.post('/', asyncRoute(async (req, res) => {
-  const user = await findUserById(req.userId);
+  const user = await findSessionUser(req);
   if (!user) return sessionEnded(res);
   const { value: media, error } = parseMediaSnapshot(req.body);
   if (error) return res.status(400).json({ error });
@@ -29,6 +29,7 @@ savedRouter.post('/', asyncRoute(async (req, res) => {
 }));
 
 savedRouter.delete('/:id', asyncRoute(async (req, res) => {
+  if (!(await findSessionUser(req))) return sessionEnded(res);
   const savedMedia = await removeSavedMedia(req.userId, req.params.id);
   if (!savedMedia) return sessionEnded(res);
   res.json({ savedMedia });

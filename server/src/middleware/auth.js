@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { findUserById } from '../db/store.js';
 
 const ALGORITHM = 'HS256';
 
@@ -9,6 +10,14 @@ const ALGORITHM = 'HS256';
 export function requireAuthConfig(_req, res, next) {
   if (process.env.JWT_SECRET) return next();
   res.status(503).json({ error: 'Accounts aren’t set up on the server yet.', code: 'not_configured' });
+}
+
+/**
+ * A token carries the account's session version; changing the password bumps it, which ends
+ * every session signed in before. Accounts and tokens from before versions count as 0.
+ */
+export function sessionToken(user) {
+  return signToken({ sub: user.id, ver: user.sessionVersion ?? 0 });
 }
 
 export function signToken(payload) {
@@ -27,10 +36,18 @@ export function requireAuth(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET, { algorithms: [ALGORITHM] });
     req.userId = payload.sub;
+    req.sessionVersion = payload.ver ?? 0;
     next();
   } catch {
     res.status(401).json({ error: 'Invalid or expired token' });
   }
+}
+
+/** The signed-in user, or null when the account is gone or the token predates a password change. */
+export async function findSessionUser(req) {
+  const user = await findUserById(req.userId);
+  if (!user || (user.sessionVersion ?? 0) !== req.sessionVersion) return null;
+  return user;
 }
 
 /** For a valid token whose account no longer exists: the session is over, not "not found". */
