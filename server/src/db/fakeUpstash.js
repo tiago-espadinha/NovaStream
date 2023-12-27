@@ -1,6 +1,6 @@
-// Test helper, not imported by the app: answers GET, SET (with NX or XX) and DEL the way Upstash's
-// REST endpoint does, from an in-memory map. Unknown commands fail loudly, so a test can't
-// pass because a command it depends on was silently ignored.
+// Test helper, not imported by the app: answers GET, MGET, SET (with NX or XX), MSET, EXISTS
+// and DEL the way Upstash's REST endpoint does, from an in-memory map. Unknown commands fail
+// loudly, so a test can't pass because a command it depends on was silently ignored.
 export function fakeUpstash() {
   const data = new Map();
   const calls = [];
@@ -10,6 +10,11 @@ export function fakeUpstash() {
     let result;
     if (cmd === 'GET') {
       result = data.get(args[0]) ?? null;
+    } else if (cmd === 'MGET') {
+      result = args.map((key) => data.get(key) ?? null);
+    } else if (cmd === 'MSET') {
+      for (let i = 0; i < args.length; i += 2) data.set(args[i], args[i + 1]);
+      result = 'OK';
     } else if (cmd === 'SET') {
       const [key, value, flag] = args;
       if ((flag === 'NX' && data.has(key)) || (flag === 'XX' && !data.has(key))) result = null;
@@ -17,6 +22,8 @@ export function fakeUpstash() {
         data.set(key, value);
         result = 'OK';
       }
+    } else if (cmd === 'EXISTS') {
+      result = args.filter((key) => data.has(key)).length;
     } else if (cmd === 'DEL') {
       result = args.filter((key) => data.delete(key)).length;
     } else {

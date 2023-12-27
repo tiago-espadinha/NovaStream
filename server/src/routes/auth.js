@@ -1,16 +1,21 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
-import { createUser, findUserByEmail, updateUser } from '../db/store.js';
+import { createUser, findUserByEmail, updateCredentials, updateUser } from '../db/store.js';
 import { hashPassword, verifyPassword } from '../utils/password.js';
 import { findSessionUser, requireAuth, sessionEnded, sessionToken } from '../middleware/auth.js';
-import { parseCredentials, parsePreferences } from '../utils/validate.js';
+import { parseCredentials, parsePasswordChange, parsePreferences } from '../utils/validate.js';
 import { asyncRoute } from '../utils/asyncRoute.js';
 
 export const authRouter = Router();
 
 function toPublicUser(user) {
-  const { passwordHash, ...rest } = user;
+  const { passwordHash, sessionVersion, ...rest } = user;
   return rest;
+}
+
+// Not 401: clients treat that as "session ended" and would sign the user out for a typo.
+function wrongPassword(res) {
+  return res.status(403).json({ error: 'That password isn’t right.', code: 'wrong_password' });
 }
 
 authRouter.post('/register', asyncRoute(async (req, res) => {
@@ -67,4 +72,20 @@ authRouter.patch('/preferences', requireAuth, asyncRoute(async (req, res) => {
     preferences: { ...user.preferences, ...value },
   });
   res.json({ user: toPublicUser(updated) });
+}));
+
+// Bumping the session version signs out every other device; this one continues with a new token.
+authRouter.put('/password', requireAuth, asyncRoute(async (req, res) => {
+  const user = await findSessionUser(req);
+  if (!user) return sessionEnded(res);
+  const { value, error } = parsePasswordChange(req.body);
+  if (error) return res.status(400).json({ error });
+  if (!(await verifyPassword(value.currentPassword, user.passwordHash))) return wrongPassword(res);
+
+  const updated = await updateCredentials(user.id, {
+    passwordHash: await hashPassword(value.newPassword),
+    sessionVersion: (user.sessionVersion ?? 0) + 1,
+  });
+  if (!updated) return sessionEnded(res);
+  res.json({ token: sessionToken(updated), user: toPublicUser(updated) });
 }));

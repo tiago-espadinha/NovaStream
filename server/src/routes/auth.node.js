@@ -19,7 +19,7 @@ const { savedRouter } = await import('./saved.js');
 const { collectionsRouter } = await import('./collections.js');
 const { requireAuthConfig, signToken } = await import('../middleware/auth.js');
 const { createUser, findUserById, updateUser } = await import('../db/store.js');
-const { hashPassword } = await import('../utils/password.js');
+const { hashPassword, verifyPassword } = await import('../utils/password.js');
 
 let server;
 let baseUrl;
@@ -112,4 +112,73 @@ test('a token for a deleted account is refused on every account route without re
   }
   assert.equal(await findUserById('gone'), null);
   assert.equal(await updateUser('gone', { name: 'x' }), null);
+});
+
+const login = (password, email = 'ada@example.com') => call('POST', '/api/auth/login', { body: { email, password } });
+const changePassword = (token, body) => call('PUT', '/api/auth/password', { token, body });
+
+test('password change: requires a valid session', async () => {
+  const { passwordHash } = await seedUser();
+  const body = { currentPassword: PASSWORD, newPassword: 'brand new pass' };
+  for (const token of [undefined, 'not-a-jwt', signToken({ sub: 'u1', ver: 1 }), signToken({ sub: 'gone' })]) {
+    assert.equal((await changePassword(token, body)).status, 401);
+  }
+  assert.equal((await findUserById('u1')).passwordHash, passwordHash);
+});
+
+test('password change: swaps the password and signs out every other session', async () => {
+  await seedUser();
+  const otherDevice = signToken({ sub: 'u1', ver: 0 });
+  const thisDevice = signToken({ sub: 'u1', ver: 0 });
+
+  const res = await changePassword(thisDevice, { currentPassword: PASSWORD, newPassword: 'brand new pass' });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.user.email, 'ada@example.com');
+  assert.equal('passwordHash' in res.body.user, false);
+  assert.equal('sessionVersion' in res.body.user, false);
+
+  assert.equal((await call('GET', '/api/auth/me', { token: res.body.token })).status, 200);
+  assert.equal((await call('GET', '/api/auth/me', { token: otherDevice })).status, 401);
+  assert.equal((await login(PASSWORD)).status, 401);
+  assert.equal((await login('brand new pass')).status, 200);
+});
+
+test('password change: a wrong current password is refused without ending the session', async () => {
+  const { passwordHash } = await seedUser();
+  const token = signToken({ sub: 'u1', ver: 0 });
+  const res = await changePassword(token, { currentPassword: 'not my password', newPassword: 'brand new pass' });
+  assert.equal(res.status, 403);
+  assert.deepEqual(res.body, { error: 'That password isn’t right.', code: 'wrong_password' });
+  assert.equal((await findUserById('u1')).passwordHash, passwordHash);
+  assert.equal((await call('GET', '/api/auth/me', { token })).status, 200);
+});
+
+test('password change: a weak, oversized or unchanged new password is refused', async () => {
+  const { passwordHash } = await seedUser();
+  const token = signToken({ sub: 'u1', ver: 0 });
+  const cases = {
+    short: 'Password must be at least 8 characters.',
+    ['é'.repeat(37)]: 'Password must be at most 72 characters.',
+    [PASSWORD]: 'Choose a password different from your current one.',
+  };
+  for (const [newPassword, error] of Object.entries(cases)) {
+    const res = await changePassword(token, { currentPassword: PASSWORD, newPassword });
+    assert.deepEqual([res.status, res.body.error], [400, error]);
+  }
+  assert.equal((await changePassword(token, undefined)).status, 400);
+  assert.equal((await findUserById('u1')).passwordHash, passwordHash);
+});
+
+test('password change: only ever changes the signed-in account', async () => {
+  await seedUser();
+  const grace = await seedUser({ id: 'u2', email: 'grace@example.com', name: 'Grace' });
+  const res = await changePassword(signToken({ sub: 'u1', ver: 0 }), {
+    currentPassword: PASSWORD,
+    newPassword: 'brand new pass',
+    id: 'u2',
+    email: 'grace@example.com',
+  });
+  assert.equal(res.status, 200);
+  assert.equal((await findUserById('u2')).passwordHash, grace.passwordHash);
+  assert.equal(await verifyPassword('brand new pass', (await findUserById('u1')).passwordHash), true);
 });

@@ -19,6 +19,15 @@ const stringList = (value, maxItems, maxLength) =>
     : [];
 const finiteOrNull = (value) => (typeof value === 'number' && Number.isFinite(value) ? value : null);
 
+/** The rule for any password a user picks, at registration or when changing it. */
+function newPasswordError(password) {
+  if (password.length < MIN_PASSWORD) return `Password must be at least ${MIN_PASSWORD} characters.`;
+  if (new TextEncoder().encode(password).length > MAX_PASSWORD) {
+    return `Password must be at most ${MAX_PASSWORD} characters.`;
+  }
+  return null;
+}
+
 export function parseCredentials(body, { register = false } = {}) {
   const { email, password, name } = body || {};
   if (!isString(email) || !isString(password) || !email.trim() || !password) {
@@ -30,14 +39,23 @@ export function parseCredentials(body, { register = false } = {}) {
   }
   if (!register) return { value: { email: normalizedEmail, password } };
 
-  if (password.length < MIN_PASSWORD) return { error: `Password must be at least ${MIN_PASSWORD} characters.` };
-  if (new TextEncoder().encode(password).length > MAX_PASSWORD) {
-    return { error: `Password must be at most ${MAX_PASSWORD} characters.` };
-  }
+  const passwordError = newPasswordError(password);
+  if (passwordError) return { error: passwordError };
   if (name !== undefined && name !== null && !isString(name)) return { error: 'Name must be text.' };
   const trimmedName = (name || '').trim();
   if (trimmedName.length > MAX_NAME) return { error: `Name must be at most ${MAX_NAME} characters.` };
   return { value: { email: normalizedEmail, password, name: trimmedName || normalizedEmail.split('@')[0] } };
+}
+
+export function parsePasswordChange(body) {
+  const { currentPassword, newPassword } = body || {};
+  if (!isString(currentPassword) || !isString(newPassword) || !currentPassword || !newPassword) {
+    return { error: 'Enter your current password and a new one.' };
+  }
+  const passwordError = newPasswordError(newPassword);
+  if (passwordError) return { error: passwordError };
+  if (newPassword === currentPassword) return { error: 'Choose a password different from your current one.' };
+  return { value: { currentPassword, newPassword } };
 }
 
 /** A saved-media snapshot: just what a card needs to render, never a full detail payload. */

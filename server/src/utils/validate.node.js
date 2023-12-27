@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseCollections, parseCredentials, parseMediaSnapshot, parsePreferences } from './validate.js';
+import {
+  parseCollections,
+  parseCredentials,
+  parseMediaSnapshot,
+  parsePasswordChange,
+  parsePreferences,
+} from './validate.js';
 
 test('credentials: rejects non-string or missing input with a 400-safe message instead of crashing', () => {
   for (const body of [undefined, {}, { email: ['a@b.co'], password: 'longenough' }, { email: 'a@b.co', password: 12345678 }]) {
@@ -24,6 +30,24 @@ test('credentials: enforces email format, password length, and name length on re
 
 test('credentials: login does not apply register-only password rules', () => {
   assert.equal(parseCredentials({ email: 'a@b.co', password: 'short' }).error, undefined);
+});
+
+test('password change: requires both passwords as non-empty text', () => {
+  for (const body of [undefined, null, {}, { currentPassword: 'longenough' }, { currentPassword: '', newPassword: 'longenough' }, { currentPassword: 1, newPassword: 'longenough' }]) {
+    assert.equal(parsePasswordChange(body).error, 'Enter your current password and a new one.');
+  }
+});
+
+test('password change: applies the registration rule to the new password only', () => {
+  const change = (newPassword) => parsePasswordChange({ currentPassword: 'short', newPassword });
+  assert.equal(change('1234567').error, 'Password must be at least 8 characters.');
+  assert.equal(change('é'.repeat(37)).error, 'Password must be at most 72 characters.');
+  assert.deepEqual(change('longenough').value, { currentPassword: 'short', newPassword: 'longenough' });
+});
+
+test('password change: refuses a new password equal to the current one', () => {
+  const { error } = parsePasswordChange({ currentPassword: 'longenough', newPassword: 'longenough' });
+  assert.equal(error, 'Choose a password different from your current one.');
 });
 
 test('media snapshot: keeps only card fields and drops detail payloads and unknown keys', () => {
