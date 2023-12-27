@@ -24,6 +24,7 @@ describe('isSessionEnded', () => {
     expect(isSessionEnded(new ApiError(401, 'Invalid or expired token'))).toBe(true);
     expect(isSessionEnded(new ApiError(503, 'x', 'not_configured'))).toBe(false);
     expect(isSessionEnded(new TypeError('Failed to fetch'))).toBe(false);
+    expect(isSessionEnded(new ApiError(403, 'That password isn’t right.', 'wrong_password'))).toBe(false);
   });
 });
 
@@ -34,6 +35,9 @@ describe('describeAccountError', () => {
     );
     expect(describeAccountError(new ApiError(409, 'An account with that email already exists'), 'fallback')).toMatch(
       /already exists/,
+    );
+    expect(describeAccountError(new ApiError(403, 'That password isn’t right.', 'wrong_password'), 'fallback')).toBe(
+      'That password isn’t right.',
     );
   });
 
