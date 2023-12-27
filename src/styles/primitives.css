@@ -347,6 +347,14 @@
   .field-hint {
     font-size: var(--font-size-label);
   }
+  .btn-danger-outline {
+    background: transparent;
+    border-color: var(--color-danger);
+    color: var(--color-danger);
+  }
+  .btn-danger-outline:hover:not(:disabled) {
+    background: var(--color-danger-surface);
+  }
   .svg {
     height: 18px;
     width: 18px;

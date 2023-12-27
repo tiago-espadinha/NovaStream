@@ -83,6 +83,56 @@
   .auth-switch:hover {
     text-decoration: underline;
   }
+  /* account settings modal */
+  .account-panel {
+    width: min(460px, 100%);
+  }
+  /* H2 rather than the auth modal's H1, so all three sections fit a laptop-height viewport. */
+  .account-name-title {
+    padding-right: var(--space-10);
+    font-size: var(--font-size-h2);
+    overflow-wrap: anywhere;
+  }
+  .account-email {
+    margin-bottom: 0;
+    overflow-wrap: anywhere;
+  }
+  .account-section {
+    display: grid;
+    gap: var(--space-3);
+    padding-top: var(--space-4);
+    margin-top: var(--space-4);
+    border-top: 1px solid var(--color-border);
+  }
+  .account-section h3 {
+    font-size: var(--font-size-h3);
+  }
+  .account-section > p {
+    margin: 0;
+    color: var(--color-text-muted);
+    font-size: var(--font-size-small);
+  }
+  .account-section .auth-form {
+    margin-bottom: 0;
+  }
+  .account-section .btn {
+    justify-self: start;
+  }
+  .account-status {
+    margin: 0;
+    font-size: var(--font-size-small);
+  }
+  .account-status:empty {
+    display: none;
+  }
+  .account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-3);
+  }
+  .account-danger h3 {
+    color: var(--color-danger);
+  }
   @media (max-width: 767px) {
     .auth-panel {
       width: 100%;
