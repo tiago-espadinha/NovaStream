@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, beforeEach, test } from 'node:test';
+import bcrypt from 'bcryptjs';
 import express from 'express';
 import { fakeUpstash } from '../db/fakeUpstash.js';
 
@@ -9,17 +10,18 @@ import { fakeUpstash } from '../db/fakeUpstash.js';
 process.env.JWT_SECRET = 'test-secret';
 process.env.UPSTASH_REDIS_REST_URL = 'https://redis.test';
 process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token';
-const upstash = fakeUpstash();
+let nowMs = Date.now();
+const upstash = fakeUpstash({ now: () => nowMs });
 const realFetch = globalThis.fetch;
 globalThis.fetch = (url, init) =>
-  String(url) === process.env.UPSTASH_REDIS_REST_URL ? upstash.fetchImpl(url, init) : realFetch(url, init);
+  String(url).startsWith(process.env.UPSTASH_REDIS_REST_URL) ? upstash.fetchImpl(url, init) : realFetch(url, init);
 
 const { authRouter } = await import('./auth.js');
 const { savedRouter } = await import('./saved.js');
 const { collectionsRouter } = await import('./collections.js');
 const { requireAuthConfig, signToken } = await import('../middleware/auth.js');
 const { createUser, findUserById, updateUser } = await import('../db/store.js');
-const { hashPassword, verifyPassword } = await import('../utils/password.js');
+const { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } = await import('../utils/password.js');
 
 let server;
 let baseUrl;
@@ -216,7 +218,7 @@ test('account deletion: removes the account and its data, and ends the session e
   assert.equal(res.status, 204);
 
   assert.equal(await findUserById('u1'), null);
-  assert.deepEqual([...upstash.data.keys()], []);
+  assert.deepEqual([...upstash.data.keys()].filter((key) => key.startsWith('user')), []);
   for (const [method, path, body] of accountRequests) {
     assert.equal((await call(method, path, { token, body })).status, 401, `${method} ${path}`);
   }
@@ -248,4 +250,100 @@ test('account deletion: only ever deletes the signed-in account', async () => {
   const grace = await findUserById('u2');
   assert.equal(grace.savedMedia.length, 1);
   assert.equal((await login(PASSWORD, 'grace@example.com')).status, 200);
+});
+
+const minutes = (n) => {
+  nowMs += n * 60 * 1000;
+};
+
+test('sign-in: after 5 failures the account answers 429 without checking the password', async () => {
+  await seedUser();
+  for (let i = 0; i < 5; i++) assert.equal((await login('not my password')).status, 401);
+
+  const res = await realFetch(`${baseUrl}/api/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'ADA@example.com', password: PASSWORD }),
+  });
+  assert.equal(res.status, 429);
+  assert.equal(res.headers.get('retry-after'), '900');
+  assert.deepEqual(await res.json(), {
+    error: 'Too many password attempts. Try again in 15 minutes.',
+    code: 'rate_limited',
+    retryAfterSeconds: 900,
+  });
+});
+
+test('sign-in: parallel guesses are held to the same 5 attempts', async () => {
+  await seedUser();
+  const statuses = await Promise.all(Array.from({ length: 10 }, () => login('not my password')));
+  assert.deepEqual(statuses.map((res) => res.status).sort(), [...Array(5).fill(401), ...Array(5).fill(429)]);
+});
+
+test('sign-in: the limit resets after the window', async () => {
+  await seedUser();
+  for (let i = 0; i < 5; i++) await login('not my password');
+  minutes(14);
+  const waiting = await login(PASSWORD);
+  assert.deepEqual([waiting.status, waiting.body.retryAfterSeconds], [429, 60]);
+  assert.equal(waiting.body.error, 'Too many password attempts. Try again in 1 minute.');
+  minutes(1);
+  assert.equal((await login(PASSWORD)).status, 200);
+});
+
+test('sign-in: a correct password clears the account count', async () => {
+  await seedUser();
+  for (let i = 0; i < 4; i++) await login('not my password');
+  assert.equal((await login(PASSWORD)).status, 200);
+  for (let i = 0; i < 4; i++) assert.equal((await login('not my password')).status, 401);
+  assert.equal((await login(PASSWORD)).status, 200);
+});
+
+test('sign-in: unknown emails are limited like real ones, and other accounts are unaffected', async () => {
+  await seedUser({ id: 'u2', email: 'grace@example.com', name: 'Grace' });
+  for (let i = 0; i < 5; i++) assert.equal((await login('guess', 'nobody@example.com')).status, 401);
+  assert.equal((await login('guess', 'nobody@example.com')).status, 429);
+  assert.equal((await login(PASSWORD, 'grace@example.com')).status, 200);
+});
+
+test('sign-in: an unknown email costs one password check and answers like a wrong password', async (t) => {
+  await seedUser();
+  const compare = t.mock.method(bcrypt, 'compare');
+  const wrong = await login('not my password');
+  assert.equal(compare.mock.callCount(), 1);
+  const unknown = await login('not my password', 'nobody@example.com');
+  assert.equal(compare.mock.callCount(), 2);
+  assert.deepEqual(unknown, wrong);
+  assert.deepEqual(wrong, { status: 401, body: { error: 'Invalid email or password' } });
+});
+
+test('sign-in: the stand-in hash for unknown emails costs as much as a stored one', async () => {
+  const { passwordHash } = await seedUser();
+  // bcryptjs returns at once for a malformed hash, so a typo here would quietly bring the leak back.
+  assert.match(DUMMY_PASSWORD_HASH, /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/);
+  assert.equal(bcrypt.getRounds(DUMMY_PASSWORD_HASH), bcrypt.getRounds(passwordHash));
+});
+
+test('sign-in: 20 failures from one IP block it for every account', async () => {
+  await seedUser();
+  for (let i = 0; i < 20; i++) assert.equal((await login('guess', `user${i}@example.com`)).status, 401);
+  assert.equal((await login(PASSWORD)).status, 429);
+});
+
+test('password change and deletion: 429 after 5 failures, keeping the password, account and session', async () => {
+  const { passwordHash } = await seedUser();
+  const token = signToken({ sub: 'u1', ver: 0 });
+  for (let i = 0; i < 3; i++) {
+    assert.equal((await changePassword(token, { currentPassword: 'nope', newPassword: 'brand new pass' })).status, 403);
+  }
+  for (let i = 0; i < 2; i++) assert.equal((await deleteAccount(token, { password: 'nope' })).status, 403);
+
+  const change = await changePassword(token, { currentPassword: PASSWORD, newPassword: 'brand new pass' });
+  assert.deepEqual([change.status, change.body.code], [429, 'rate_limited']);
+  const remove = await deleteAccount(token, { password: PASSWORD });
+  assert.deepEqual([remove.status, remove.body.code], [429, 'rate_limited']);
+
+  assert.equal((await findUserById('u1')).passwordHash, passwordHash);
+  assert.equal((await call('GET', '/api/auth/me', { token })).status, 200);
+  assert.equal((await login(PASSWORD)).status, 429);
 });
