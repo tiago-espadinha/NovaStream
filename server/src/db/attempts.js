@@ -1,5 +1,6 @@
-// Expiring counters for password attempts, kept apart from the user records in store.js so a
-// counter write can never race a write of the user. Same backend choice as the store:
+// Expiring counters for password and sign-up attempts, kept apart from the user records in
+// store.js so a counter write can never race a write of the user. Same backend choice as the
+// store:
 // - Upstash Redis when its REST URL/token are set, so every serverless instance on Vercel
 //   shares one count.
 // - Otherwise an in-memory map, which is enough for a single local dev process.

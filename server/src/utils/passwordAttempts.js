@@ -68,7 +68,7 @@ export function clientIp(req, env = process.env) {
   return forwarded || req.socket.remoteAddress || 'unknown';
 }
 
-function positiveInt(value, fallback) {
+export function positiveInt(value, fallback) {
   const number = Number(value);
   return Number.isInteger(number) && number > 0 ? number : fallback;
 }

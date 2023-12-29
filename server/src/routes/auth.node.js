@@ -20,7 +20,7 @@ const { authRouter } = await import('./auth.js');
 const { savedRouter } = await import('./saved.js');
 const { collectionsRouter } = await import('./collections.js');
 const { requireAuthConfig, signToken } = await import('../middleware/auth.js');
-const { createUser, findUserById, updateUser } = await import('../db/store.js');
+const { createUser, findUserByEmail, findUserById, updateUser } = await import('../db/store.js');
 const { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } = await import('../utils/password.js');
 
 let server;
@@ -346,4 +346,48 @@ test('password change and deletion: 429 after 5 failures, keeping the password, 
   assert.equal((await findUserById('u1')).passwordHash, passwordHash);
   assert.equal((await call('GET', '/api/auth/me', { token })).status, 200);
   assert.equal((await login(PASSWORD)).status, 429);
+});
+
+const register = (email, password = PASSWORD) => call('POST', '/api/auth/register', { body: { email, password } });
+
+test('sign-up: a taken email answers 409 email_taken, whatever its case', async () => {
+  await seedUser();
+  assert.deepEqual(await register('ADA@example.com'), {
+    status: 409,
+    body: { error: 'An account with that email already exists.', code: 'email_taken' },
+  });
+});
+
+test('sign-up: new and taken emails share one budget of 10 per IP an hour', async () => {
+  await seedUser();
+  for (let i = 0; i < 5; i++) assert.equal((await register('ada@example.com')).status, 409);
+  for (let i = 0; i < 5; i++) assert.equal((await register(`new${i}@example.com`)).status, 201);
+
+  const res = await realFetch(`${baseUrl}/api/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: 'ada@example.com', password: PASSWORD }),
+  });
+  assert.equal(res.status, 429);
+  assert.equal(res.headers.get('retry-after'), '3600');
+  assert.deepEqual(await res.json(), {
+    error: 'Too many sign-up attempts. Try again in 60 minutes.',
+    code: 'rate_limited',
+    retryAfterSeconds: 3600,
+  });
+  assert.equal((await register('fresh@example.com')).status, 429);
+  assert.equal(await findUserByEmail('fresh@example.com'), null);
+});
+
+test('sign-up: malformed requests are refused without using the budget', async () => {
+  for (let i = 0; i < 12; i++) assert.equal((await register('not an email')).status, 400);
+  assert.equal((await register('new@example.com')).status, 201);
+});
+
+test('sign-up: the limit resets after the window and is separate from sign-in', async () => {
+  for (let i = 0; i < 10; i++) await register(`new${i}@example.com`);
+  assert.equal((await register('late@example.com')).status, 429);
+  assert.equal((await login(PASSWORD, 'new0@example.com')).status, 200);
+  minutes(60);
+  assert.equal((await register('late@example.com')).status, 201);
 });

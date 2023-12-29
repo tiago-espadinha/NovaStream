@@ -6,6 +6,7 @@ import { findSessionUser, requireAuth, sessionEnded, sessionToken } from '../mid
 import { parseCredentials, parsePasswordChange, parsePreferences } from '../utils/validate.js';
 import { asyncRoute } from '../utils/asyncRoute.js';
 import { clientIp, passwordAttempts } from '../utils/passwordAttempts.js';
+import { signUpAttempts } from '../utils/signUpAttempts.js';
 
 export const authRouter = Router();
 
@@ -19,11 +20,15 @@ function wrongPassword(res) {
   return res.status(403).json({ error: 'That password isn’t right.', code: 'wrong_password' });
 }
 
-function tooManyAttempts(res, seconds) {
+function emailTaken(res) {
+  return res.status(409).json({ error: 'An account with that email already exists.', code: 'email_taken' });
+}
+
+function tooManyAttempts(res, seconds, what = 'password') {
   const minutes = Math.ceil(seconds / 60);
   res.set('Retry-After', String(seconds));
   return res.status(429).json({
-    error: `Too many password attempts. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+    error: `Too many ${what} attempts. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
     code: 'rate_limited',
     retryAfterSeconds: seconds,
   });
@@ -44,9 +49,10 @@ authRouter.post('/register', asyncRoute(async (req, res) => {
   const { value, error } = parseCredentials(req.body, { register: true });
   if (error) return res.status(400).json({ error });
 
-  if (await findUserByEmail(value.email)) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
-  }
+  // The 409 below tells anyone whether an email has an account; the per-IP limit keeps that slow.
+  const wait = await signUpAttempts.admit(clientIp(req));
+  if (wait) return tooManyAttempts(res, wait, 'sign-up');
+  if (await findUserByEmail(value.email)) return emailTaken(res);
 
   const user = {
     id: randomUUID(),
@@ -57,9 +63,7 @@ authRouter.post('/register', asyncRoute(async (req, res) => {
     savedMedia: [],
     createdAt: new Date().toISOString(),
   };
-  if (!(await createUser(user))) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
-  }
+  if (!(await createUser(user))) return emailTaken(res);
 
   const token = sessionToken(user);
   res.status(201).json({ token, user: toPublicUser(user) });
