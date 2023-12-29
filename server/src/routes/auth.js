@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { createUser, deleteUser, findUserByEmail, updateCredentials, updateUser } from '../db/store.js';
-import { hashPassword, verifyPassword } from '../utils/password.js';
+import { DUMMY_PASSWORD_HASH, hashPassword, verifyPassword } from '../utils/password.js';
 import { findSessionUser, requireAuth, sessionEnded, sessionToken } from '../middleware/auth.js';
 import { parseCredentials, parsePasswordChange, parsePreferences } from '../utils/validate.js';
 import { asyncRoute } from '../utils/asyncRoute.js';
+import { clientIp, passwordAttempts } from '../utils/passwordAttempts.js';
+import { signUpAttempts } from '../utils/signUpAttempts.js';
 
 export const authRouter = Router();
 
@@ -18,13 +20,39 @@ function wrongPassword(res) {
   return res.status(403).json({ error: 'That password isn’t right.', code: 'wrong_password' });
 }
 
+function emailTaken(res) {
+  return res.status(409).json({ error: 'An account with that email already exists.', code: 'email_taken' });
+}
+
+function tooManyAttempts(res, seconds, what = 'password') {
+  const minutes = Math.ceil(seconds / 60);
+  res.set('Retry-After', String(seconds));
+  return res.status(429).json({
+    error: `Too many ${what} attempts. Try again in ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`,
+    code: 'rate_limited',
+    retryAfterSeconds: seconds,
+  });
+}
+
+// Every password check goes through here, so a rate-limited caller never reaches bcrypt.
+async function attemptPassword(req, email, password, passwordHash) {
+  const who = { email, ip: clientIp(req) };
+  const wait = await passwordAttempts.admit(who);
+  if (wait) return { wait };
+  // Unknown emails still pay for one compare, so timing doesn't reveal which accounts exist.
+  const ok = (await verifyPassword(password, passwordHash || DUMMY_PASSWORD_HASH)) && Boolean(passwordHash);
+  if (ok) await passwordAttempts.succeeded(who);
+  return { ok };
+}
+
 authRouter.post('/register', asyncRoute(async (req, res) => {
   const { value, error } = parseCredentials(req.body, { register: true });
   if (error) return res.status(400).json({ error });
 
-  if (await findUserByEmail(value.email)) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
-  }
+  // The 409 below tells anyone whether an email has an account; the per-IP limit keeps that slow.
+  const wait = await signUpAttempts.admit(clientIp(req));
+  if (wait) return tooManyAttempts(res, wait, 'sign-up');
+  if (await findUserByEmail(value.email)) return emailTaken(res);
 
   const user = {
     id: randomUUID(),
@@ -35,9 +63,7 @@ authRouter.post('/register', asyncRoute(async (req, res) => {
     savedMedia: [],
     createdAt: new Date().toISOString(),
   };
-  if (!(await createUser(user))) {
-    return res.status(409).json({ error: 'An account with that email already exists' });
-  }
+  if (!(await createUser(user))) return emailTaken(res);
 
   const token = sessionToken(user);
   res.status(201).json({ token, user: toPublicUser(user) });
@@ -48,9 +74,9 @@ authRouter.post('/login', asyncRoute(async (req, res) => {
   if (error) return res.status(400).json({ error });
 
   const user = await findUserByEmail(value.email);
-  if (!user || !(await verifyPassword(value.password, user.passwordHash))) {
-    return res.status(401).json({ error: 'Invalid email or password' });
-  }
+  const { wait, ok } = await attemptPassword(req, value.email, value.password, user?.passwordHash);
+  if (wait) return tooManyAttempts(res, wait);
+  if (!ok) return res.status(401).json({ error: 'Invalid email or password' });
 
   const token = sessionToken(user);
   res.json({ token, user: toPublicUser(user) });
@@ -80,7 +106,9 @@ authRouter.put('/password', requireAuth, asyncRoute(async (req, res) => {
   if (!user) return sessionEnded(res);
   const { value, error } = parsePasswordChange(req.body);
   if (error) return res.status(400).json({ error });
-  if (!(await verifyPassword(value.currentPassword, user.passwordHash))) return wrongPassword(res);
+  const { wait, ok } = await attemptPassword(req, user.email, value.currentPassword, user.passwordHash);
+  if (wait) return tooManyAttempts(res, wait);
+  if (!ok) return wrongPassword(res);
 
   const updated = await updateCredentials(user.id, {
     passwordHash: await hashPassword(value.newPassword),
@@ -98,7 +126,9 @@ authRouter.delete('/account', requireAuth, asyncRoute(async (req, res) => {
   if (typeof password !== 'string' || !password) {
     return res.status(400).json({ error: 'Enter your password to delete your account.' });
   }
-  if (!(await verifyPassword(password, user.passwordHash))) return wrongPassword(res);
+  const { wait, ok } = await attemptPassword(req, user.email, password, user.passwordHash);
+  if (wait) return tooManyAttempts(res, wait);
+  if (!ok) return wrongPassword(res);
 
   await deleteUser(user.id);
   res.status(204).end();

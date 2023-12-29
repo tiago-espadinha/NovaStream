@@ -36,6 +36,13 @@ describe('changePassword', () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status: 403, code: 'wrong_password', message: 'That password isn’t right.' });
   });
+
+  it('rejects with the server’s wait when password attempts are rate-limited', async () => {
+    const message = 'Too many password attempts. Try again in 15 minutes.';
+    stubFetch(429, { error: message, code: 'rate_limited', retryAfterSeconds: 900 });
+    const error = await changePassword('tok', 'nope', 'new secret').catch((err: unknown) => err);
+    expect(error).toMatchObject({ status: 429, code: 'rate_limited', message });
+  });
 });
 
 describe('deleteAccount', () => {

@@ -22,6 +22,7 @@ describe('isSessionEnded', () => {
     expect(isSessionEnded(new ApiError(503, 'x', 'not_configured'))).toBe(false);
     expect(isSessionEnded(new TypeError('Failed to fetch'))).toBe(false);
     expect(isSessionEnded(new ApiError(403, 'That password isn’t right.', 'wrong_password'))).toBe(false);
+    expect(isSessionEnded(new ApiError(429, 'Too many password attempts.', 'rate_limited'))).toBe(false);
   });
 });
 
@@ -32,6 +33,11 @@ describe('describeAccountError', () => {
     expect(describeAccountError(new ApiError(403, 'That password isn’t right.', 'wrong_password'), 'fallback')).toBe(
       'That password isn’t right.',
     );
+  });
+
+  it('passes on the wait from a rate-limited password attempt', () => {
+    const limited = new ApiError(429, 'Too many password attempts. Try again in 15 minutes.', 'rate_limited');
+    expect(describeAccountError(limited, 'fallback')).toBe('Too many password attempts. Try again in 15 minutes.');
   });
 
   it('never shows raw network or server failure text', () => {
