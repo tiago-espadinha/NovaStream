@@ -221,8 +221,8 @@ select {
 .search-keyword {
   position: absolute;
   right: 44px;
-  top: 50%;
-  translate: 0 -50%;
+  top: var(--space-1);
+  bottom: var(--space-1);
   pointer-events: none;
 }
 
@@ -231,26 +231,31 @@ select {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-1);
+  padding: 0 var(--space-3) 0 0;
   border: 1px solid var(--color-border-secondary);
   border-radius: var(--radius-pill);
   background: var(--color-surface-secondary);
   max-width: 100%;
+  overflow: hidden;
   overflow-wrap: anywhere;
   vertical-align: middle;
 }
+/* Set like the type nav buttons, and as tall as the chip or search field it sits in. */
 .keyword-kind {
+  display: flex;
   flex-shrink: 0;
-  padding: 0 var(--space-2);
+  align-items: center;
+  align-self: stretch;
+  padding: 0 var(--space-3);
   border-radius: var(--radius-pill);
   background: var(--color-secondary);
   color: var(--color-on-primary);
   font-family: var(--font-body);
-  font-size: var(--font-size-label);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  line-height: 1.8;
-  text-transform: uppercase;
+  font-size: var(--font-size-control);
+  font-weight: 600;
+  letter-spacing: normal;
+  line-height: 1.2;
+  text-transform: capitalize;
 }
 
 .header-actions {
@@ -272,6 +277,52 @@ select {
 }
 .saved-link.active {
   box-shadow: inset 0 -2px var(--color-primary);
+}
+.language-picker {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 40px;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--color-text);
+  font-size: var(--font-size-small);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+.language-picker:hover {
+  border-color: var(--color-text);
+  background: var(--color-surface-glass);
+}
+.language-picker:has(select:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+.language-picker select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.language-picker option {
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+.language-code {
+  display: none;
+}
+.language-chevron {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .account-button {
   min-height: 40px;
@@ -363,18 +414,35 @@ nav.types button.active {
     top: 0;
     backdrop-filter: blur(8px);
   }
+  .site-header-bare {
+    padding-bottom: var(--space-3);
+  }
 }
 @media (max-width: 767px) {
   .header-bar {
-    grid-template-columns: auto 1fr;
+    grid-template-columns: auto minmax(0, 1fr);
     grid-template-areas:
       "logo actions"
       "search search";
-    gap: var(--space-3);
+    gap: var(--space-3) var(--space-2);
   }
+  /* Too little room truncates the account button instead of pushing the page sideways. */
   .header-actions {
     justify-self: end;
-    gap: var(--space-3);
+    min-width: 0;
+    max-width: 100%;
+    gap: var(--space-2);
+  }
+  .account-button {
+    min-width: 0;
+    padding-inline: var(--space-3);
+  }
+  /* A narrow bar shows the short code in the same pill. */
+  .language-name {
+    display: none;
+  }
+  .language-code {
+    display: inline;
   }
   .search {
     max-width: none;
@@ -391,6 +459,11 @@ nav.types button.active {
   nav.types button {
     padding-inline: var(--space-2);
     font-size: var(--font-size-small);
+  }
+}
+@media (max-width: 420px) {
+  .logo {
+    font-size: 1.375rem;
   }
 }
 
@@ -1389,10 +1462,20 @@ main:focus {
 .site-footer p {
   margin: 0;
 }
-.site-footer strong {
-  color: var(--color-text);
+.footer-developer-name {
+  display: inline-block;
+  margin-inline: calc(-1 * var(--space-2));
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-pill);
+  color: var(--color-secondary);
   font-weight: 600;
   white-space: nowrap;
+  text-decoration: none;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+.footer-developer-name:hover {
+  background: var(--color-surface-glass);
+  color: var(--color-primary);
 }
 .footer-developer {
   font-size: var(--font-size-control);
@@ -1400,7 +1483,7 @@ main:focus {
   flex-wrap: wrap;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2) var(--space-4);
+  gap: var(--space-2);
 }
 .footer-social {
   display: flex;

@@ -4,6 +4,7 @@ import { isDialogOpen } from '../hooks/useDialog';
 import type { AuthUser, ContentType } from '../types';
 import { parseContentQuery } from '../utils/contentFilters';
 import { isMacPlatform, isSearchShortcut, searchShortcutLabels } from '../utils/searchShortcut';
+import { LanguagePicker } from './LanguagePicker';
 import { TypeNav } from './TypeNav';
 
 const isMac = isMacPlatform();
@@ -48,7 +49,7 @@ export function Header({
   }, [savedPage]);
 
   return (
-    <header className="site-header">
+    <header className={`site-header${savedPage ? ' site-header-bare' : ''}`}>
       <div className="header-bar">
         <a className="logo" href="/">
           NOVA<span>stream</span>
@@ -112,6 +113,7 @@ export function Header({
           >
             Saved
           </a>
+          <LanguagePicker />
           {sessionStatus === 'checking' ? (
             <button type="button" className="account-button" disabled aria-busy="true">
               Signing in…
