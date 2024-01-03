@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SessionStatus } from '../context/AuthContext';
 import { isDialogOpen } from '../hooks/useDialog';
 import type { AuthUser, ContentType } from '../types';
@@ -8,7 +9,8 @@ import { LanguagePicker } from './LanguagePicker';
 import { TypeNav } from './TypeNav';
 
 const isMac = isMacPlatform();
-const shortcut = searchShortcutLabels(isMac);
+// The wordmark is a brand name, the same in every language.
+const LOGO = { lead: 'NOVA', tail: 'stream' };
 
 interface HeaderProps {
   activeType: ContentType | 'all';
@@ -33,6 +35,8 @@ export function Header({
   onOpenAccount,
   savedPage = false,
 }: HeaderProps) {
+  const { t } = useTranslation();
+  const shortcut = searchShortcutLabels(isMac);
   const searchRef = useRef<HTMLInputElement>(null);
   const keywordKind = parseContentQuery(query).kind;
 
@@ -52,12 +56,12 @@ export function Header({
     <header className={`site-header${savedPage ? ' site-header-bare' : ''}`}>
       <div className="header-bar">
         <a className="logo" href="/">
-          NOVA<span>stream</span>
+          {LOGO.lead}<span>{LOGO.tail}</span>
         </a>
         {!savedPage && (
           <form className="search" role="search" onSubmit={(e) => e.preventDefault()}>
             <label htmlFor="site-search" className="visually-hidden">
-              Search titles, genres, or tags
+              {t('header.searchLabel')}
             </label>
             <svg className="search-icon" viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="11" cy="11" r="7" />
@@ -69,7 +73,7 @@ export function Header({
               type="search"
               aria-keyshortcuts={shortcut.aria}
               aria-describedby={keywordKind === 'text' ? undefined : 'search-keyword'}
-              placeholder="Search titles, genre: Drama, tag: Indie…"
+              placeholder={t('header.searchPlaceholder')}
               autoComplete="off"
               maxLength={200}
               value={query}
@@ -86,7 +90,7 @@ export function Header({
                   {keywordKind}
                 </span>
                 <span id="search-keyword" className="visually-hidden">
-                  Searching by {keywordKind}
+                  {t('header.searchingBy', { kind: keywordKind })}
                 </span>
               </>
             )}
@@ -94,7 +98,7 @@ export function Header({
               <button
                 type="button"
                 className="search-clear"
-                aria-label="Clear search"
+                aria-label={t('common.clearSearch')}
                 onClick={() => {
                   onQueryChange('');
                   searchRef.current?.focus();
@@ -111,31 +115,31 @@ export function Header({
             href="/saved"
             aria-current={savedPage ? 'page' : undefined}
           >
-            Saved
+            {t('common.saved')}
           </a>
           <LanguagePicker />
           {sessionStatus === 'checking' ? (
             <button type="button" className="account-button" disabled aria-busy="true">
-              Signing in…
+              {t('header.signingIn')}
             </button>
           ) : sessionStatus === 'signedOut' ? (
             <button type="button" className="account-button" onClick={onOpenAuth}>
-              Sign in
+              {t('header.signIn')}
             </button>
           ) : (
             <button
               type="button"
               className="account-button account-button-user"
               aria-haspopup="dialog"
-              aria-label={user ? `Account settings (${user.name})` : 'Account settings'}
-              title={user ? `Account settings (${user.name})` : 'Account settings'}
+              aria-label={user ? t('header.accountSettingsNamed', { name: user.name }) : t('header.accountSettings')}
+              title={user ? t('header.accountSettingsNamed', { name: user.name }) : t('header.accountSettings')}
               onClick={onOpenAccount}
             >
               <svg className="account-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <circle cx="12" cy="8" r="4" />
                 <path d="M4 21a8 8 0 0 1 16 0" />
               </svg>
-              <span className="account-name">{user?.name ?? 'Account'}</span>
+              <span className="account-name">{user?.name ?? t('header.account')}</span>
             </button>
           )}
         </div>

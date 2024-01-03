@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { currentLocale } from "../i18n";
 import { useDialog } from "../hooks/useDialog";
 import type { ContentItem, ContentType, MediaSummary } from "../types";
 import type { SavedCollection } from "../utils/collections";
+import { parseNumericValue } from "../utils/contentFilters";
 import { mediaTypeLabel } from "../utils/discovery";
 import { fallbackArtwork } from "../utils/gradient";
 import { formatLength } from "../utils/mediaLabels";
@@ -12,6 +14,12 @@ import { CollectionMenu } from "./CollectionMenu";
 import { ArtworkViewer } from "./ArtworkViewer";
 import { SeriesEpisodes } from "./SeriesEpisodes";
 import { ArtistAlbums } from "./ArtistAlbums";
+
+/** Last.fm sends counts as English-formatted strings ("1,234,567"); show them the way the active language writes numbers. */
+function formatCount(value: string): string {
+  if (!/\d/.test(value)) return value;
+  return new Intl.NumberFormat(currentLocale()).format(parseNumericValue(value));
+}
 
 interface MediaDetailProps {
   item: ContentItem;
@@ -91,13 +99,13 @@ export function MediaDetail({
         {/* Before Close so Tab follows the screen, left to right; Close still takes first focus. */}
         {backTo && (
           <button type="button" className="btn btn-ghost detail-back" onClick={onBack}>
-            <span aria-hidden="true">‹ </span>Back to {backTo}
+            <span aria-hidden="true">‹ </span>{t('detail.backTo', { name: backTo })}
           </button>
         )}
         <button
           type="button"
           className="icon-button detail-close"
-          aria-label="Close details"
+          aria-label={t('detail.closeDetails')}
           data-autofocus
           onClick={onClose}
         >
@@ -115,7 +123,7 @@ export function MediaDetail({
               <button
                 type="button"
                 className="detail-art-open"
-                aria-label={`View full artwork for ${item.title}`}
+                aria-label={t('detail.viewArtwork', { title: item.title })}
                 onClick={() => setViewingArtwork(true)}
               >
                 <img src={item.posterUrl} alt="" />
@@ -128,7 +136,7 @@ export function MediaDetail({
             <p className="eyebrow">{mediaTypeLabel(item)}</p>
             <h2 id="detail-title">{item.title}</h2>
             <p className="detail-subline">
-              <ScoreBadge item={item} fallback="Not yet rated" />
+              <ScoreBadge item={item} fallback={t('detail.notRated')} />
               {item.releaseYear != null && <span>{item.releaseYear}</span>}
               {length && <span>{length}</span>}
             </p>
@@ -147,7 +155,7 @@ export function MediaDetail({
                     secondaryColor="var(--color-on-primary)"
                   />
                 </span>
-                {favorite ? "Saved to favorites" : "Save to favorites"}
+                {favorite ? t('detail.savedToFavorites') : t('detail.saveToFavorites')}
               </button>
               {collections.length > 0 && (
                 <CollectionMenu
@@ -166,7 +174,7 @@ export function MediaDetail({
 
         <div className="detail-body">
           {(genres.length > 0 || (item.tags ?? []).length > 0) && (
-            <div className="detail-genres" aria-label="Search by genre or tag" role="group">
+            <div className="detail-genres" aria-label={t('detail.searchByTerm')} role="group">
               {genres.map((g) => (
                 <button type="button" className="genre-chip" key={`genre-${g}`} onClick={() => onSearchTerm(`genre: ${g}`)}>
                   {g}
@@ -185,8 +193,8 @@ export function MediaDetail({
             </div>
           )}
 
-          <h3 className="meta-label">Overview</h3>
-          <p className="detail-overview">{item.overview || "No synopsis available."}</p>
+          <h3 className="meta-label">{t('detail.overview')}</h3>
+          <p className="detail-overview">{item.overview || t('detail.noSynopsis')}</p>
 
           <dl className="detail-meta-grid">
             {item.musicKind !== "artist" && (
@@ -197,19 +205,19 @@ export function MediaDetail({
             )}
             {item.cast && item.cast.length > 0 && (
               <div>
-                <dt className="meta-label">Cast</dt>
-                <dd className="meta-value">{item.cast.join(", ")}</dd>
+                <dt className="meta-label">{t('detail.cast')}</dt>
+                <dd className="meta-value">{item.cast.join(t('common.listComma'))}</dd>
               </div>
             )}
             {item.playStats && (
               <>
                 <div>
-                  <dt className="meta-label">Plays</dt>
-                  <dd className="meta-value">{item.playStats.playcount}</dd>
+                  <dt className="meta-label">{t('detail.plays')}</dt>
+                  <dd className="meta-value">{formatCount(item.playStats.playcount)}</dd>
                 </div>
                 <div>
-                  <dt className="meta-label">Listeners</dt>
-                  <dd className="meta-value">{item.playStats.listeners}</dd>
+                  <dt className="meta-label">{t('detail.listeners')}</dt>
+                  <dd className="meta-value">{formatCount(item.playStats.listeners)}</dd>
                 </div>
               </>
             )}
@@ -217,7 +225,7 @@ export function MediaDetail({
 
           {item.tracklist && (
             <section className="detail-section" aria-labelledby="tracklist-title">
-              <h3 id="tracklist-title" className="meta-label">Tracklist</h3>
+              <h3 id="tracklist-title" className="meta-label">{t('detail.tracklist')}</h3>
               <ol className="tracklist">
                 {item.tracklist.map((track, index) => (
                   <li className="track-row" key={`${track.name}-${index}`}>
@@ -242,7 +250,7 @@ export function MediaDetail({
 
           {(item.type === "movie" || item.type === "tv") && streamingPlatforms.length > 0 && (
             <section className="detail-section" aria-labelledby="streaming-title">
-              <h3 id="streaming-title" className="meta-label">Streaming</h3>
+              <h3 id="streaming-title" className="meta-label">{t('detail.streaming')}</h3>
               <ul className="platform-chips">
                 {streamingPlatforms.map((platform) => (
                   <li className="platform-chip" key={platform}>

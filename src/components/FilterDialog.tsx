@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useDialog } from '../hooks/useDialog';
 import { CONTENT_TYPE_LABELS, MUSIC_KIND_LABELS, type ContentType, type MusicKind } from '../types';
 import type { GenreSelection } from '../utils/contentFilters';
@@ -44,10 +45,14 @@ export function FilterDialog({
   onReset,
   onClose,
 }: FilterDialogProps) {
+  const { t, i18n } = useTranslation();
   const panelRef = useDialog<HTMLDivElement>(onClose);
+  const formatPlays = (plays: number) => plays.toLocaleString(i18n.resolvedLanguage);
   // Spoken and shown in words: a bare "0" or "500000" says nothing about what the slider filters.
-  const ratingText = minRating > 0 ? `${minRating.toFixed(1)} or higher` : 'Any rating';
-  const playsText = minPlays > 0 ? `${minPlays.toLocaleString()} plays or more` : 'Any play count';
+  const ratingText = minRating > 0
+      ? t('filters.ratingOrHigher', { rating: minRating.toFixed(1) })
+      : t('filters.anyRating');
+  const playsText = minPlays > 0 ? t('filters.playsOrMore', { count: minPlays, plays: formatPlays(minPlays) }) : t('filters.anyPlays');
 
   return (
     <div className="dialog-backdrop" onClick={onClose}>
@@ -61,8 +66,8 @@ export function FilterDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="dialog-header">
-          <h2 id="filter-title">Filter results</h2>
-          <button type="button" className="icon-button" aria-label="Close filters" onClick={onClose}>
+          <h2 id="filter-title">{t('filters.title')}</h2>
+          <button type="button" className="icon-button" aria-label={t('filters.close')} onClick={onClose}>
             <span aria-hidden="true">✕</span>
           </button>
         </div>
@@ -70,7 +75,7 @@ export function FilterDialog({
         <div className="filter-body">
           {showCategories && (
             <fieldset className="filter-block">
-              <legend className="filter-label">Categories</legend>
+              <legend className="filter-label">{t('filters.categories')}</legend>
               <div className="chip-row">
                 {(Object.keys(CONTENT_TYPE_LABELS) as ContentType[]).map((type) => (
                   <label key={type} className="choice-chip">
@@ -89,7 +94,7 @@ export function FilterDialog({
 
           {showMusicKind && (
             <div className="filter-block" role="group" aria-labelledby="music-kind-label">
-              <span id="music-kind-label" className="filter-label">Music type</span>
+              <span id="music-kind-label" className="filter-label">{t('filters.musicType')}</span>
               <div className="chip-row">
                 {(['all', ...Object.keys(MUSIC_KIND_LABELS)] as Array<MusicKind | 'all'>).map((kind) => (
                   <button
@@ -99,7 +104,7 @@ export function FilterDialog({
                     aria-pressed={musicKind === kind}
                     onClick={() => onMusicKindChange(kind)}
                   >
-                    <ChipText label={kind === 'all' ? 'All kinds' : `${MUSIC_KIND_LABELS[kind]}s`} />
+                    <ChipText label={kind === 'all' ? t('filters.allKinds') : t(`mediaTypes.musicKindsPlural.${kind}`)} />
                   </button>
                 ))}
               </div>
@@ -107,9 +112,9 @@ export function FilterDialog({
           )}
 
           <div className="filter-block">
-            <span className="filter-label">Genres</span>
+            <span className="filter-label">{t('filters.genres')}</span>
             {genreGroups.map(({ type, genres }) => (
-              <div key={type} className="genre-group" role="group" aria-label={`${CONTENT_TYPE_LABELS[type]} genres`}>
+              <div key={type} className="genre-group" role="group" aria-label={t('filters.genresOf', { type: CONTENT_TYPE_LABELS[type] })}>
                 <span className="genre-group-name">{CONTENT_TYPE_LABELS[type]}</span>
                 <div className="chip-row">
                   {genres.map((genre) => (
@@ -130,7 +135,7 @@ export function FilterDialog({
 
           {showRating && (
             <label className="range-field">
-              <span>Minimum rating</span>
+              <span>{t('filters.minRating')}</span>
               <input
                 type="range"
                 min="0"
@@ -140,13 +145,13 @@ export function FilterDialog({
                 aria-valuetext={ratingText}
                 onChange={(e) => onMinRatingChange(Number(e.target.value))}
               />
-              <output>{minRating > 0 ? `${minRating.toFixed(1)}+` : 'Any'}</output>
+              <output>{minRating > 0 ? t('filters.ratingShort', { rating: minRating.toFixed(1) }) : t('filters.any')}</output>
             </label>
           )}
 
           {showPlays && (
             <label className="range-field">
-              <span>Minimum plays</span>
+              <span>{t('filters.minPlays')}</span>
               <input
                 type="range"
                 min="0"
@@ -156,17 +161,17 @@ export function FilterDialog({
                 aria-valuetext={playsText}
                 onChange={(e) => onMinPlaysChange(Number(e.target.value))}
               />
-              <output>{minPlays > 0 ? `${minPlays.toLocaleString()}+` : 'Any'}</output>
+              <output>{minPlays > 0 ? t('filters.playsShort', { plays: formatPlays(minPlays) }) : t('filters.any')}</output>
             </label>
           )}
         </div>
 
         <div className="dialog-actions">
           <button type="button" className="btn btn-ghost" onClick={onReset}>
-            Reset filters
+            {t('common.resetFilters')}
           </button>
           <button type="button" className="btn btn-primary" onClick={onClose}>
-            Show results
+            {t('filters.show')}
           </button>
         </div>
       </div>

@@ -56,14 +56,14 @@ export function SeriesEpisodes({ externalId, seasons }: SeriesEpisodesProps) {
     <section className="detail-section episodes" aria-labelledby="episodes-title">
       <div className="episodes-header">
         <h3 id="episodes-title" className="meta-label">
-          Episodes
+          {t('detail.episodes')}
         </h3>
         <label className="sort-field episodes-season">
-          <span>Season</span>
+          <span>{t('detail.seasonPicker')}</span>
           <select ref={selectRef} value={selected} onChange={(e) => pickSeason(e.target.value)}>
             {seasons.map((season) => (
               <option key={season.number} value={season.number}>
-                {seasonLabel(t, season)} · {season.episodeCount} {season.episodeCount === 1 ? 'episode' : 'episodes'}
+                {t('detail.seasonOption', { season: seasonLabel(t, season), count: season.episodeCount })}
               </option>
             ))}
           </select>
@@ -75,16 +75,18 @@ export function SeriesEpisodes({ externalId, seasons }: SeriesEpisodesProps) {
           <p>{error.message}</p>
           {error.retryable && (
             <button type="button" className="btn btn-ghost" onClick={retry}>
-              Try again
+              {t('common.tryAgain')}
             </button>
           )}
         </div>
       ) : !episodes ? (
-        <Spinner label="Loading episodes…" />
+        <Spinner label={t('detail.loadingEpisodes')} />
       ) : episodes.length === 0 ? (
-        <p className="episodes-status">No episodes listed for this season yet.</p>
+        <p className="episodes-status">{t('detail.noEpisodes')}</p>
       ) : (
-        <ol className="tracklist episode-list" aria-label={`${seasonLabel(t, selectedSeason ?? { number: selected, name: null })} episodes`}>
+        <ol className="tracklist episode-list" aria-label={t('detail.seasonEpisodes', {
+          season: seasonLabel(t, selectedSeason ?? { number: selected, name: null }),
+        })}>
           {episodes.map((episode) => (
             <li className="track-row episode-row" key={episode.number}>
               <span className="track-number">{episode.number}</span>

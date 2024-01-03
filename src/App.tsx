@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
 import { MediaDetail } from './components/MediaDetail';
@@ -48,23 +49,29 @@ interface DetailTrailEntry {
   openedId: string;
 }
 
-function headingFor(query: string, awaitingLiveQuery: boolean, activeType: ContentType | 'all'): ReactNode {
+function headingFor(
+  t: TFunction,
+  query: string,
+  awaitingLiveQuery: boolean,
+  activeType: ContentType | 'all',
+): ReactNode {
   const parsed = parseContentQuery(query);
   if (parsed.kind !== 'text' && parsed.value) {
     return (
-      <>
-        Results for <KeywordChip kind={parsed.kind} value={parsed.value} />
-      </>
+      <Trans
+        i18nKey="search.resultsForKeyword"
+        components={{ chip: <KeywordChip kind={parsed.kind} value={parsed.value} /> }}
+      />
     );
   }
-  if (query) return `Results for “${query}”`;
-  if (awaitingLiveQuery) return 'Search to get started';
-  return activeType === 'all' ? 'Browse tonight' : CONTENT_TYPE_LABELS[activeType];
+  if (query) return t('search.resultsForQuery', { query });
+  if (awaitingLiveQuery) return t('search.start');
+  return activeType === 'all' ? t('search.browse') : CONTENT_TYPE_LABELS[activeType];
 }
 
 export default function App() {
   // TMDb content comes back in the active language, so loads below re-run when it changes.
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const language = i18n.resolvedLanguage;
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
   const [musicKind, setMusicKind] = useState<MusicKind | 'all'>('all');
@@ -116,8 +123,8 @@ export default function App() {
 
   // Tabs, history, and screen readers name the page by its title.
   useEffect(() => {
-    document.title = isSavedPage ? 'Saved · Nova Stream' : 'Nova Stream';
-  }, [isSavedPage]);
+    document.title = isSavedPage ? t('app.savedPageTitle') : t('app.pageTitle');
+  }, [isSavedPage, t, language]);
 
   // --- search ---
   // The remembered "All" search is in the old language; declared first so it clears before the search effect runs.
@@ -334,7 +341,7 @@ export default function App() {
     (activeCategories.includes('music') && musicKind !== 'all' ? 1 : 0);
   // Known from the card that opened the detail, so a failed lookup can still name the title.
   const selectedTitle = [...liveResults, ...savedMedia].find((item) => item.id === selectedId)?.title;
-  const resultsHeading = headingFor(trimmedQuery, awaitingLiveQuery, activeType);
+  const resultsHeading = headingFor(t, trimmedQuery, awaitingLiveQuery, activeType);
 
   // The Saved page needs both lists: it's only ready when both are, and an error in either is an error.
   const savedStatuses = [favorites.status, collectionsState.status];
@@ -347,7 +354,7 @@ export default function App() {
       message: sessionNotice,
       tone: 'warning',
       action: {
-        label: 'Sign in',
+        label: t('common.signIn'),
         onClick: () => {
           clearSessionNotice();
           setAuthModalOpen(true);
@@ -359,7 +366,7 @@ export default function App() {
   if (accountDeleted) {
     accountNotices.push({
       id: 'account-deleted',
-      message: 'Your account was deleted, with its saved titles and collections.',
+      message: t('app.accountDeleted'),
       tone: 'success',
       onDismiss: () => setAccountDeleted(false),
     });
@@ -371,7 +378,7 @@ export default function App() {
       tone: favorites.notice.error ? 'error' : 'success',
       action: favorites.notice.offerSignIn
         ? {
-            label: 'Sign in',
+            label: t('common.signIn'),
             onClick: () => {
               favorites.dismissNotice();
               setAuthModalOpen(true);
@@ -386,7 +393,7 @@ export default function App() {
       id: 'collections',
       message: collectionsState.saveError,
       tone: 'error',
-      action: collectionsState.status === 'ready' ? { label: 'Try again', onClick: collectionsState.retrySave } : undefined,
+      action: collectionsState.status === 'ready' ? { label: t('common.tryAgain'), onClick: collectionsState.retrySave } : undefined,
       onDismiss: collectionsState.dismissSaveError,
     });
   }
@@ -394,7 +401,7 @@ export default function App() {
   return (
     <>
       <a className="skip-link" href="#main-content">
-        Skip to content
+        {t('app.skipToContent')}
       </a>
       <Header
         activeType={activeType}
@@ -435,7 +442,7 @@ export default function App() {
       ) : (
       <main id="main-content" tabIndex={-1}>
         <AccountNotices notices={accountNotices} />
-        <h1 className="visually-hidden">Discover films, series, music, books and games</h1>
+        <h1 className="visually-hidden">{t('app.heading')}</h1>
         {spotlight && (
           <Spotlight
             item={spotlight}
@@ -446,12 +453,9 @@ export default function App() {
         )}
         {awaitingLiveQuery && (
           <section className="intro" aria-labelledby="intro-title">
-            <p className="eyebrow">Live discovery</p>
-            <h2 id="intro-title">Find your next obsession.</h2>
-            <p>
-              Search across movies, shows, music, books and games. Results come from live TMDb,
-              Last.fm, Deezer, Open Library, and RAWG data.
-            </p>
+            <p className="eyebrow">{t('app.intro.eyebrow')}</p>
+            <h2 id="intro-title">{t('app.intro.title')}</h2>
+            <p>{t('app.intro.body')}</p>
           </section>
         )}
 
@@ -459,16 +463,16 @@ export default function App() {
           <Shelf
             id="shelf-favorites"
             level={2}
-            title="Your favorites"
+            title={t('app.favoritesShelf')}
             items={favoritesShelf}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             onSelect={setSelectedId}
             endAction={
               <a className="shelf-see-all" href="/saved">
-                <span>See all in Saved</span>
+                <span>{t('app.seeAllSaved')}</span>
                 <span className="shelf-see-all-count">
-                  {savedMedia.length} {savedMedia.length === 1 ? 'favorite' : 'favorites'}
+                  {t('account.favoritesCount', { count: savedMedia.length })}
                 </span>
               </a>
             }
@@ -478,14 +482,14 @@ export default function App() {
           <Shelf
             id="shelf-trending"
             level={2}
-            title="Trending this week"
+            title={t('app.trendingShelf')}
             items={trendingItems}
             isFavorite={isFavorite}
             onToggleFavorite={toggleFavorite}
             onSelect={setSelectedId}
             notice={
               trending.loading ? (
-                <Spinner label="Loading what’s trending…" />
+                <Spinner label={t('app.trendingLoading')} />
               ) : (
                 trending.problem && (
                   <div className={`notice ${trendingFailed ? 'notice-error' : 'notice-warning'}`}>
@@ -503,7 +507,7 @@ export default function App() {
                           trending.retry();
                         }}
                       >
-                        Try again
+                        {t('common.tryAgain')}
                       </button>
                     )}
                   </div>
@@ -521,18 +525,18 @@ export default function App() {
               </h2>
               <p className="results-count" aria-live="polite">
                 {!awaitingLiveQuery && !liveLoading && !searchFailed &&
-                  `${displayedItems.length} ${displayedItems.length === 1 ? 'title' : 'titles'}`}
+                  t('shelf.titles', { count: displayedItems.length })}
               </p>
             </div>
             {!awaitingLiveQuery && !searchFailed && (
               <div className="results-toolbar">
                 <label className="sort-field">
-                  <span>Sort</span>
+                  <span>{t('search.sort')}</span>
                   <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortOption)}>
-                    <option value="featured">{trimmedQuery ? 'Best match' : 'Featured'}</option>
-                    <option value="rating">Top rated</option>
-                    <option value="newest">Newest</option>
-                    <option value="title">A–Z</option>
+                    <option value="featured">{trimmedQuery ? t('search.sortOptions.bestMatch') : t('search.sortOptions.featured')}</option>
+                    <option value="rating">{t('search.sortOptions.rating')}</option>
+                    <option value="newest">{t('search.sortOptions.newest')}</option>
+                    <option value="title">{t('search.sortOptions.title')}</option>
                   </select>
                 </label>
                 <button
@@ -541,7 +545,7 @@ export default function App() {
                   aria-haspopup="dialog"
                   onClick={() => setShowFilters(true)}
                 >
-                  Filter{activeFilterCount > 0 ? ` · ${activeFilterCount}` : ''}
+                  {activeFilterCount > 0 ? t('filters.buttonCount', { count: activeFilterCount }) : t('filters.button')}
                 </button>
               </div>
             )}
@@ -556,7 +560,7 @@ export default function App() {
               </p>
               {liveError.retryable && (
                 <button type="button" className="btn btn-ghost" onClick={() => setSearchAttempt((n) => n + 1)}>
-                  Try again
+                  {t('common.tryAgain')}
                 </button>
               )}
             </div>
@@ -564,30 +568,30 @@ export default function App() {
 
           {awaitingLiveQuery ? (
             <p className="empty-state">
-              Type in the search box above to query the live databases (movies, TV, music, books, games).
+              {t('search.prompt')}
             </p>
           ) : liveLoading ? (
-            <Spinner label="Searching live databases…" />
+            <Spinner label={t('search.searching')} />
           ) : searchFailed ? (
             <div className="empty-state">
               <div className="empty-actions">
                 <button type="button" className="btn btn-ghost" onClick={() => setQuery('')}>
-                  Clear search
+                  {t('common.clearSearch')}
                 </button>
               </div>
             </div>
           ) : displayedItems.length === 0 ? (
             <div className="empty-state">
-              <p>{trimmedQuery ? `No matches for “${trimmedQuery}”.` : 'No titles match these filters.'}</p>
+              <p>{trimmedQuery ? t('search.noMatches', { query: trimmedQuery }) : t('search.noFilterMatches')}</p>
               <div className="empty-actions">
                 {trimmedQuery && (
                   <button type="button" className="btn btn-ghost" onClick={() => setQuery('')}>
-                    Clear search
+                    {t('common.clearSearch')}
                   </button>
                 )}
                 {activeFilterCount > 0 && (
                   <button type="button" className="btn btn-ghost" onClick={resetFilters}>
-                    Reset filters
+                    {t('common.resetFilters')}
                   </button>
                 )}
               </div>
@@ -596,7 +600,7 @@ export default function App() {
             <>
               <Shelf
                 id="shelf-mix"
-                title="Tonight’s mix"
+                title={t('app.mixShelf')}
                 items={mixedShelf}
                 isFavorite={isFavorite}
                 onToggleFavorite={toggleFavorite}
