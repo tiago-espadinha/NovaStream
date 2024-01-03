@@ -96,12 +96,12 @@ export async function getBookDetail(workId) {
     title: work.title,
     type: 'book',
     rating: normalizeRatingOutOf10(ratings?.summary?.average, 5),
-    overview: description || 'No synopsis available.',
+    overview: description || '',
     genres: (work.subjects || []).slice(0, 5),
     releaseYear: yearMatch ? Number(yearMatch[0]) : null,
-    runtime: null, // Open Library doesn't reliably expose page count at the work level
-    creatorLabel: 'Author',
-    creator: authorDocs.filter(Boolean).map((a) => a.name).join(', ') || 'Unknown',
+    length: null, // Open Library doesn't reliably expose page count at the work level
+    creatorRole: 'author',
+    creator: authorDocs.filter(Boolean).map((a) => a.name).join(', ') || null,
     // No verified "buy/borrow" link data at this endpoint — honest generic pointer rather
     // than a fabricated storefront list.
     platforms: ['Read & borrow on Open Library'],

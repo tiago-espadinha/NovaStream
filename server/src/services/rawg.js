@@ -112,9 +112,9 @@ export async function getGameDetail(id) {
     genres: (raw.genres || []).map((g) => g.name),
     tags: (raw.tags || []).map((tag) => tag.name).filter(Boolean),
     releaseYear: raw.released ? Number(raw.released.slice(0, 4)) : null,
-    runtime: raw.playtime ? `~${raw.playtime} hrs` : null,
-    creatorLabel: "Studio",
-    creator: creator || "Unknown",
+    length: raw.playtime ? { kind: "playtime", hours: raw.playtime } : null,
+    creatorRole: "studio",
+    creator: creator || null,
     platforms: (raw.platforms || []).map((p) => p.platform.name),
     posterUrl: raw.background_image || null,
   };

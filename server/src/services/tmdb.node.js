@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, test } from "node:test";
-import { getTvDetail, getTvSeason } from "./tmdb.js";
+import { getMovieDetail, getTvDetail, getTvSeason } from "./tmdb.js";
 
 let originalFetch;
 let originalApiKey;
@@ -46,20 +46,20 @@ test("lists regular seasons in order with specials last", async () => {
   assert.deepEqual(detail.seasons, [
     { number: 1, name: "Season 1", episodeCount: 10 },
     { number: 2, name: "Season 2", episodeCount: 8 },
-    { number: 5, name: "Season 5", episodeCount: 6 },
+    { number: 5, name: null, episodeCount: 6 },
     { number: 0, name: "Specials", episodeCount: 3 },
   ]);
 });
 
 test("keeps a specials-only series and tolerates missing season data", async () => {
   mockTmdb({ id: 7, name: "Example Show", seasons: [{ season_number: 0, name: null }] });
-  assert.deepEqual((await getTvDetail("7")).seasons, [{ number: 0, name: "Specials", episodeCount: 0 }]);
+  assert.deepEqual((await getTvDetail("7")).seasons, [{ number: 0, name: null, episodeCount: 0 }]);
 
   mockTmdb({ id: 7, name: "Example Show" });
   assert.deepEqual((await getTvDetail("7")).seasons, []);
 });
 
-test("maps a season's episodes in order, with fallbacks for missing fields", async () => {
+test("maps a season's episodes in order, with null for missing fields", async () => {
   const paths = mockTmdb({
     name: "Season 2",
     episodes: [
@@ -76,7 +76,7 @@ test("maps a season's episodes in order, with fallbacks for missing fields", asy
     number: 2,
     name: "Season 2",
     episodes: [
-      { number: 1, title: "Episode 1", airDate: null },
+      { number: 1, title: null, airDate: null },
       { number: 2, title: "Second", airDate: "2024-01-12" },
     ],
   });
@@ -84,5 +84,24 @@ test("maps a season's episodes in order, with fallbacks for missing fields", asy
 
 test("gives an empty episode list when TMDb has none", async () => {
   mockTmdb({ name: null });
-  assert.deepEqual(await getTvSeason("7", 0), { number: 0, name: "Specials", episodes: [] });
+  assert.deepEqual(await getTvSeason("7", 0), { number: 0, name: null, episodes: [] });
+});
+
+test("sends structured length and creator role instead of English labels", async () => {
+  mockTmdb({ id: 1, title: "Film", runtime: 125, credits: { crew: [{ job: "Director", name: "Ada" }] } });
+  const movie = await getMovieDetail("1");
+  assert.deepEqual(movie.length, { kind: "minutes", minutes: 125 });
+  assert.equal(movie.creatorRole, "director");
+  assert.equal(movie.creator, "Ada");
+
+  mockTmdb({ id: 1, title: "Film", runtime: 0 });
+  const unknown = await getMovieDetail("1");
+  assert.equal(unknown.length, null);
+  assert.equal(unknown.creator, null);
+
+  mockTmdb({ id: 7, name: "Show", number_of_seasons: 2 });
+  const tv = await getTvDetail("7");
+  assert.deepEqual(tv.length, { kind: "seasons", seasons: 2, episodes: null });
+  assert.equal(tv.creatorRole, "creator");
+  assert.equal(tv.creator, null);
 });

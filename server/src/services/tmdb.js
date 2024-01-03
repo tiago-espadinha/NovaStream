@@ -175,8 +175,9 @@ export function searchTvByTag(tag) {
   return discoverByKeyword("tv", tag);
 }
 
+// The client renders its own label ("Specials", "Season N") when TMDb sends no name.
 function seasonName(number, name) {
-  return name || (number === 0 ? "Specials" : `Season ${number}`);
+  return name || null;
 }
 
 // TMDb lists specials (season 0) first; regular seasons read better ahead of them.
@@ -196,8 +197,6 @@ export async function getMovieDetail(id) {
     append_to_response: "credits,watch/providers",
   });
   const director = raw.credits?.crew?.find((c) => c.job === "Director");
-  const hours = Math.floor((raw.runtime || 0) / 60);
-  const mins = (raw.runtime || 0) % 60;
   return {
     id: buildId("movie", raw.id),
     title: raw.title,
@@ -206,11 +205,9 @@ export async function getMovieDetail(id) {
     overview: raw.overview || "",
     genres: (raw.genres || []).map((g) => g.name),
     releaseYear: raw.release_date ? Number(raw.release_date.slice(0, 4)) : null,
-    runtime: raw.runtime
-      ? `${hours}h ${mins.toString().padStart(2, "0")}m`
-      : null,
-    creatorLabel: "Director",
-    creator: director?.name || "Unknown",
+    length: raw.runtime > 0 ? { kind: "minutes", minutes: raw.runtime } : null,
+    creatorRole: "director",
+    creator: director?.name || null,
     cast: (raw.credits?.cast || []).slice(0, 6).map((c) => c.name),
     platforms: watchProviders(raw["watch/providers"]),
     posterUrl: raw.poster_path
@@ -234,9 +231,13 @@ export async function getTvDetail(id) {
     releaseYear: raw.first_air_date
       ? Number(raw.first_air_date.slice(0, 4))
       : null,
-    runtime: `${raw.number_of_seasons ?? "?"} season${raw.number_of_seasons === 1 ? "" : "s"} · ${raw.number_of_episodes ?? "?"} episodes`,
-    creatorLabel: "Creator",
-    creator: creator?.name || "Unknown",
+    length: {
+      kind: "seasons",
+      seasons: raw.number_of_seasons ?? null,
+      episodes: raw.number_of_episodes ?? null,
+    },
+    creatorRole: "creator",
+    creator: creator?.name || null,
     cast: (raw.credits?.cast || []).slice(0, 6).map((c) => c.name),
     platforms: watchProviders(raw["watch/providers"]),
     posterUrl: raw.poster_path
@@ -255,7 +256,7 @@ export async function getTvSeason(id, season) {
       .filter((episode) => Number.isInteger(episode?.episode_number))
       .map((episode) => ({
         number: episode.episode_number,
-        title: episode.name || `Episode ${episode.episode_number}`,
+        title: episode.name || null,
         airDate: episode.air_date || null,
       }))
       .sort((a, b) => a.number - b.number),

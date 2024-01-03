@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as api from '../services/apiService';
 import type { Episode, SeasonSummary } from '../types';
 import { defaultSeason, formatAirDate } from '../utils/episodes';
 import { describeSeasonError, type LiveProblem } from '../utils/liveErrors';
+import { episodeTitle, seasonLabel } from '../utils/mediaLabels';
 import Spinner from './Spinner';
 
 interface SeriesEpisodesProps {
@@ -13,6 +15,7 @@ interface SeriesEpisodesProps {
 
 /** Season picker and episode list; each season is fetched the first time it's picked. */
 export function SeriesEpisodes({ externalId, seasons }: SeriesEpisodesProps) {
+  const { t } = useTranslation();
   const [selected, setSelected] = useState(() => defaultSeason(seasons));
   const [loaded, setLoaded] = useState<Record<number, Episode[]>>({});
   const [error, setError] = useState<LiveProblem | null>(null);
@@ -60,7 +63,7 @@ export function SeriesEpisodes({ externalId, seasons }: SeriesEpisodesProps) {
           <select ref={selectRef} value={selected} onChange={(e) => pickSeason(e.target.value)}>
             {seasons.map((season) => (
               <option key={season.number} value={season.number}>
-                {season.name} · {season.episodeCount} {season.episodeCount === 1 ? 'episode' : 'episodes'}
+                {seasonLabel(t, season)} · {season.episodeCount} {season.episodeCount === 1 ? 'episode' : 'episodes'}
               </option>
             ))}
           </select>
@@ -81,11 +84,11 @@ export function SeriesEpisodes({ externalId, seasons }: SeriesEpisodesProps) {
       ) : episodes.length === 0 ? (
         <p className="episodes-status">No episodes listed for this season yet.</p>
       ) : (
-        <ol className="tracklist episode-list" aria-label={`${selectedSeason?.name ?? 'Season'} episodes`}>
+        <ol className="tracklist episode-list" aria-label={`${seasonLabel(t, selectedSeason ?? { number: selected, name: null })} episodes`}>
           {episodes.map((episode) => (
             <li className="track-row episode-row" key={episode.number}>
               <span className="track-number">{episode.number}</span>
-              <span className="episode-title">{episode.title}</span>
+              <span className="episode-title">{episodeTitle(t, episode)}</span>
               <span className="track-duration">{formatAirDate(episode.airDate)}</span>
             </li>
           ))}

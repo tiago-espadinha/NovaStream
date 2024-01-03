@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useDialog } from "../hooks/useDialog";
 import type { ContentItem, ContentType, MediaSummary } from "../types";
 import type { SavedCollection } from "../utils/collections";
 import { mediaTypeLabel } from "../utils/discovery";
 import { fallbackArtwork } from "../utils/gradient";
+import { formatLength } from "../utils/mediaLabels";
 import { ScoreBadge } from "./ScoreBadge";
 import HeartIcon from "./HeartIcon";
 import { CollectionMenu } from "./CollectionMenu";
@@ -55,6 +57,8 @@ export function MediaDetail({
   onSearchTerm,
   onClose,
 }: MediaDetailProps) {
+  const { t } = useTranslation();
+  const length = formatLength(t, item.length);
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [viewingArtwork, setViewingArtwork] = useState(false);
 
@@ -126,7 +130,7 @@ export function MediaDetail({
             <p className="detail-subline">
               <ScoreBadge item={item} fallback="Not yet rated" />
               {item.releaseYear != null && <span>{item.releaseYear}</span>}
-              {item.runtime && <span>{item.runtime}</span>}
+              {length && <span>{length}</span>}
             </p>
             <div className="detail-actions">
               <button
@@ -185,10 +189,10 @@ export function MediaDetail({
           <p className="detail-overview">{item.overview || "No synopsis available."}</p>
 
           <dl className="detail-meta-grid">
-            {item.musicKind !== "artist" && item.creator && (
+            {item.musicKind !== "artist" && (
               <div>
-                <dt className="meta-label">{item.creatorLabel}</dt>
-                <dd className="meta-value">{item.creator}</dd>
+                <dt className="meta-label">{t(`detail.creatorRole.${item.creatorRole}`)}</dt>
+                <dd className="meta-value">{item.creator ?? t('detail.unknownCreator')}</dd>
               </div>
             )}
             {item.cast && item.cast.length > 0 && (
