@@ -1,5 +1,6 @@
 import { PROVIDER_TIMEOUT_MS, withTimeout } from './providerError.js';
 import { searchAcross } from './searchAcross.js';
+import { LOCALIZED_TYPES } from '../utils/lang.js';
 import { trendingMovies, trendingTv } from './tmdb.js';
 import { trendingMusic } from './lastfm.js';
 import { trendingBooks } from './openLibrary.js';
@@ -16,19 +17,26 @@ const ITEMS_PER_TYPE = 4;
  */
 function cachedLoader(sources, { ttlMs, timeoutMs, now }) {
   const entries = new Map();
-  return (type) => {
-    const cached = entries.get(type);
+  return (type, lang) => {
+    // Films and TV come back in the viewer's language, so each language gets its own entry.
+    const localized = LOCALIZED_TYPES.has(type);
+    const cacheKey = localized ? `${type}:${lang}` : type;
+    const cached = entries.get(cacheKey);
     if (cached && (cached.pending || cached.expiresAt > now())) return cached.promise;
 
     const entry = { pending: true, expiresAt: 0 };
-    entry.promise = withTimeout(() => sources[type](), timeoutMs, `${type} trending`);
-    entries.set(type, entry);
+    entry.promise = withTimeout(
+      () => (localized ? sources[type](lang) : sources[type]()),
+      timeoutMs,
+      `${type} trending`,
+    );
+    entries.set(cacheKey, entry);
     entry.promise.then(
       () => {
         entry.pending = false;
         entry.expiresAt = now() + ttlMs;
       },
-      () => entries.delete(type),
+      () => entries.delete(cacheKey),
     );
     return entry.promise;
   };
@@ -54,12 +62,12 @@ export function createTrendingFeed(
 ) {
   const types = Object.keys(sources);
   const load = cachedLoader(sources, { ttlMs, timeoutMs, now });
-  return async () => {
-    const { results, errors } = await searchAcross(types, async (type) => (await load(type)).slice(0, ITEMS_PER_TYPE), {
-      timeoutMs,
-      log,
-      label: 'trending',
-    });
+  return async (lang = 'en') => {
+    const { results, errors } = await searchAcross(
+      types,
+      async (type) => (await load(type, lang)).slice(0, ITEMS_PER_TYPE),
+      { timeoutMs, log, label: 'trending' },
+    );
     return { results: interleaveByType(results, types), errors };
   };
 }

@@ -1,5 +1,12 @@
 // The source catalog: every other locale must have each of these keys (src/i18n/catalog.test.ts).
 export const en = {
+  errors: {
+    offline: 'Couldn’t reach the server. Check your connection and try again.',
+    notConfigured: 'Accounts aren’t set up on the server yet.',
+    wrongPassword: 'That password isn’t right.',
+    rateLimited_one: 'Too many password attempts. Try again in {{count}} minute.',
+    rateLimited_other: 'Too many password attempts. Try again in {{count}} minutes.',
+  },
   footer: {
     builtBy: 'Nova Stream was developed by <strong>{{name}}</strong>',
     portfolio: '{{name}}’s portfolio',
