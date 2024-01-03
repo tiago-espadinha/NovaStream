@@ -105,3 +105,36 @@ test('a timed-out provider is retried on the next request instead of staying stu
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.deepEqual((await getTrending()).results.map((item) => item.id), ['tv-1']);
 });
+
+test('caches movie and tv per language while other types are fetched once', async () => {
+  const calls = [];
+  const source = (type) => async (...args) => {
+    calls.push([type, ...args]);
+    return items(type, 1);
+  };
+  const getTrending = createTrendingFeed(
+    { movie: source('movie'), tv: source('tv'), music: source('music'), book: source('book'), game: source('game') },
+    { log: quiet },
+  );
+  await getTrending('pt-PT');
+  await getTrending('en');
+  assert.equal(calls.filter(([type]) => type === 'movie').length, 2);
+  assert.equal(calls.filter(([type]) => type === 'tv').length, 2);
+  for (const type of ['music', 'book', 'game']) assert.equal(calls.filter(([t]) => t === type).length, 1, type);
+
+  const before = calls.length;
+  await getTrending('pt-PT');
+  await getTrending('en');
+  assert.equal(calls.length, before);
+});
+
+test('localized sources receive the language and the others receive nothing', async () => {
+  const args = {};
+  const record = (type) => async (...received) => {
+    args[type] = received;
+    return items(type, 1);
+  };
+  const getTrending = createTrendingFeed({ movie: record('movie'), tv: record('tv'), book: record('book') }, { log: quiet });
+  await getTrending('fr');
+  assert.deepEqual(args, { movie: ['fr'], tv: ['fr'], book: [] });
+});

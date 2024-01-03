@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Header } from './components/Header';
 import { ContentGrid } from './components/ContentGrid';
 import { MediaDetail } from './components/MediaDetail';
@@ -62,6 +63,9 @@ function headingFor(query: string, awaitingLiveQuery: boolean, activeType: Conte
 }
 
 export default function App() {
+  // TMDb content comes back in the active language, so loads below re-run when it changes.
+  const { i18n } = useTranslation();
+  const language = i18n.resolvedLanguage;
   const [activeType, setActiveType] = useState<ContentType | 'all'>('all');
   const [musicKind, setMusicKind] = useState<MusicKind | 'all'>('all');
   const [query, setQuery] = useState('');
@@ -107,7 +111,7 @@ export default function App() {
   const favorites = useFavorites();
   const { isFavorite, toggleFavorite, savedMedia } = favorites;
   const collectionsState = useCollections();
-  const trending = useTrending(!USE_MOCK);
+  const trending = useTrending(!USE_MOCK, language);
   const isSavedPage = window.location.pathname.replace(/\/$/, '') === '/saved';
 
   // Tabs, history, and screen readers name the page by its title.
@@ -116,6 +120,11 @@ export default function App() {
   }, [isSavedPage]);
 
   // --- search ---
+  // The remembered "All" search is in the old language; declared first so it clears before the search effect runs.
+  useEffect(() => {
+    allSearch.current = null;
+  }, [language]);
+
   useEffect(() => {
     if (USE_MOCK) return;
     const parsedQuery = parseContentQuery(query);
@@ -163,7 +172,7 @@ export default function App() {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [query, activeType, musicKind, searchAttempt]);
+  }, [query, activeType, musicKind, searchAttempt, language]);
 
   const activeCategories = useMemo(
     () => (activeType === 'all' ? selectedCategories : [activeType]),
@@ -240,7 +249,7 @@ export default function App() {
     return () => {
       active = false;
     };
-  }, [selectedId, detailAttempt]);
+  }, [selectedId, detailAttempt, language]);
 
   const previousDetail = detailTrail[detailTrail.length - 1];
   // The restore sets `detail` to the entry's own item.

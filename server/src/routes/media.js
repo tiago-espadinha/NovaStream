@@ -3,6 +3,7 @@ import { getMovieDetail, getTvDetail, getTvSeason } from '../services/tmdb.js';
 import { getBookDetail } from '../services/openLibrary.js';
 import { getGameDetail } from '../services/rawg.js';
 import { getArtistTopAlbums, getMusicDetail } from '../services/lastfm.js';
+import { LOCALIZED_TYPES, parseLang } from '../utils/lang.js';
 import { errorCode, PROVIDER_TIMEOUT_MS, withTimeout } from '../services/providerError.js';
 
 export const mediaRouter = Router();
@@ -51,7 +52,7 @@ mediaRouter.get('/tv/:id/season/:season', async (req, res) => {
 
   try {
     const season = await withTimeout(
-      () => getTvSeason(params.id, params.season),
+      () => getTvSeason(params.id, params.season, parseLang(req.query.lang)),
       PROVIDER_TIMEOUT_MS,
       'tv season',
     );
@@ -80,9 +81,11 @@ mediaRouter.get('/:type/:id', async (req, res) => {
   const { type, id } = req.params;
   if (!Object.hasOwn(GETTERS, type)) return res.status(400).json({ error: `Unknown type "${type}"` });
   const getter = GETTERS[type];
+  const lang = parseLang(req.query.lang);
+  const load = LOCALIZED_TYPES.has(type) ? () => getter(id, lang) : () => getter(id);
 
   try {
-    const detail = await withTimeout(() => getter(id), PROVIDER_TIMEOUT_MS, `${type} detail`);
+    const detail = await withTimeout(load, PROVIDER_TIMEOUT_MS, `${type} detail`);
     res.json(detail);
   } catch (err) {
     sendFailure(res, `${type}/${JSON.stringify(id)}`, err);

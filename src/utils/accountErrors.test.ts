@@ -35,9 +35,24 @@ describe('describeAccountError', () => {
     );
   });
 
-  it('passes on the wait from a rate-limited password attempt', () => {
-    const limited = new ApiError(429, 'Too many password attempts. Try again in 15 minutes.', 'rate_limited');
-    expect(describeAccountError(limited, 'fallback')).toBe('Too many password attempts. Try again in 15 minutes.');
+  it('words a rate-limited password attempt from the catalog, rounding the wait up to whole minutes', () => {
+    const limited = (seconds?: number) =>
+      describeAccountError(new ApiError(429, 'server text', 'rate_limited', seconds), 'fallback');
+    expect(limited(59)).toBe('Too many password attempts. Try again in 1 minute.');
+    expect(limited(60)).toBe('Too many password attempts. Try again in 1 minute.');
+    expect(limited(61)).toBe('Too many password attempts. Try again in 2 minutes.');
+    expect(limited(900)).toBe('Too many password attempts. Try again in 15 minutes.');
+    expect(limited(undefined)).toBe('Too many password attempts. Try again in 1 minute.');
+  });
+
+  it('words a wrong password from the catalog', () => {
+    expect(describeAccountError(new ApiError(403, 'server text', 'wrong_password'), 'fallback')).toBe(
+      'That password isn’t right.',
+    );
+  });
+
+  it('passes an unknown client error’s message through', () => {
+    expect(describeAccountError(new ApiError(422, 'Name is too long', undefined), 'fallback')).toBe('Name is too long');
   });
 
   it('never shows raw network or server failure text', () => {

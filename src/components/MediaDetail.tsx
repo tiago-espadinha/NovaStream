@@ -57,7 +57,7 @@ export function MediaDetail({
   onSearchTerm,
   onClose,
 }: MediaDetailProps) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const length = formatLength(t, item.length);
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [viewingArtwork, setViewingArtwork] = useState(false);
@@ -254,7 +254,7 @@ export function MediaDetail({
           )}
 
           {item.type === "tv" && item.seasons && item.seasons.length > 0 && (
-            <SeriesEpisodes key={item.id} externalId={item.id.replace(/^tv-/, "")} seasons={item.seasons} />
+            <SeriesEpisodes key={`${item.id}:${i18n.resolvedLanguage}`} externalId={item.id.replace(/^tv-/, "")} seasons={item.seasons} />
           )}
         </div>
         {viewingArtwork && item.posterUrl && (
