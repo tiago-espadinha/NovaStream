@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { MediaSummary } from '../types';
 import { ContentCard } from './ContentCard';
 
@@ -29,6 +30,7 @@ export function Shelf({
   endAction,
   notice,
 }: ShelfProps) {
+  const { t } = useTranslation();
   const Heading = level === 2 ? 'h2' : 'h3';
   const trackRef = useRef<HTMLUListElement>(null);
   const prevRef = useRef<HTMLButtonElement>(null);
@@ -115,7 +117,7 @@ export function Shelf({
         <Heading id={titleId} tabIndex={-1}>{title}</Heading>
         {items.length > 0 && (
           <span className="shelf-count">
-            {items.length} {items.length === 1 ? 'title' : 'titles'}
+            {t('shelf.titles', { count: items.length })}
           </span>
         )}
       </div>
@@ -126,7 +128,7 @@ export function Shelf({
             ref={prevRef}
             type="button"
             className="shelf-arrow shelf-arrow-prev"
-            aria-label={`Scroll ${title} back`}
+            aria-label={t('shelf.scrollBack', { title })}
             aria-controls={trackId}
             hidden={atStart}
             onClick={() => scrollByPage(-1)}
@@ -151,7 +153,7 @@ export function Shelf({
             ref={nextRef}
             type="button"
             className="shelf-arrow shelf-arrow-next"
-            aria-label={`Scroll ${title} forward`}
+            aria-label={t('shelf.scrollForward', { title })}
             aria-controls={trackId}
             hidden={atEnd}
             onClick={() => scrollByPage(1)}

@@ -1,3 +1,4 @@
+import i18n, { currentLocale } from '../i18n';
 import type { SeasonSummary } from '../types';
 
 /** The season to open first: the lowest regular season, else specials, else none. */
@@ -11,9 +12,9 @@ export function defaultSeason(seasons: SeasonSummary[]): number | null {
  * "5 Jan 2024"-style date for an episode, or "TBA" when there isn't one. The date is read
  * as UTC so a viewer west of Greenwich doesn't see the day before.
  */
-export function formatAirDate(airDate: string | null, locale?: string): string {
+export function formatAirDate(airDate: string | null, locale: string = currentLocale()): string {
   const parts = airDate?.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!parts) return 'TBA';
+  if (!parts) return i18n.t('detail.episode.tba');
   const time = Date.UTC(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]));
   return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }).format(
     time,

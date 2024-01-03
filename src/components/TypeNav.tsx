@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { ContentType } from '../types';
 import { CONTENT_TYPE_LABELS } from '../types';
 
@@ -9,17 +10,18 @@ interface TypeNavProps {
 }
 
 export function TypeNav({ active, onChange }: TypeNavProps) {
+  const { t } = useTranslation();
   return (
-    <nav className="types" aria-label="Media type">
-      {TYPES.map((t) => (
+    <nav className="types" aria-label={t('typeNav.label')}>
+      {TYPES.map((type) => (
         <button
-          key={t}
+          key={type}
           type="button"
-          className={t === active ? 'active' : ''}
-          aria-pressed={t === active}
-          onClick={() => onChange(t)}
+          className={type === active ? 'active' : ''}
+          aria-pressed={type === active}
+          onClick={() => onChange(type)}
         >
-          {t === 'all' ? 'All' : CONTENT_TYPE_LABELS[t]}
+          {type === 'all' ? t('common.all') : CONTENT_TYPE_LABELS[type]}
         </button>
       ))}
     </nav>

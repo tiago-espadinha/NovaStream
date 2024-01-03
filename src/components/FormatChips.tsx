@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { ContentType } from '../types';
 import { CONTENT_TYPE_LABELS } from '../types';
 import { ToggleChip } from './ToggleChip';
@@ -11,10 +12,11 @@ interface FormatChipsProps {
 
 /** The formats a new collection covers: an "All formats" shortcut plus one chip per format. */
 export function FormatChips({ selected, onChange }: FormatChipsProps) {
+  const { t } = useTranslation();
   const all = selected.length === CONTENT_TYPES.length;
   return (
     <div className="chip-row">
-      <ToggleChip label="All formats" checked={all} onChange={() => onChange(all ? [] : CONTENT_TYPES)} />
+      <ToggleChip label={t('common.allFormats')} checked={all} onChange={() => onChange(all ? [] : CONTENT_TYPES)} />
       {CONTENT_TYPES.map((type) => (
         <ToggleChip
           key={type}

@@ -1,11 +1,22 @@
+import i18n from "./i18n";
+
 export type ContentType = "movie" | "tv" | "music" | "book" | "game";
 export type MusicKind = "artist" | "album" | "song";
 
-export const MUSIC_KIND_LABELS: Record<MusicKind, string> = {
-  artist: "Artist",
-  album: "Album",
-  song: "Song",
-};
+/**
+ * A label map whose values are looked up in the active language each time they are read, so
+ * keys can be listed (`Object.keys`) while the words follow the language switcher.
+ */
+function localizedLabels<K extends string>(keys: readonly K[], label: (key: K) => string): Record<K, string> {
+  const labels = {} as Record<K, string>;
+  for (const key of keys) Object.defineProperty(labels, key, { enumerable: true, get: () => label(key) });
+  return labels;
+}
+
+export const MUSIC_KIND_LABELS: Record<MusicKind, string> = localizedLabels(
+  ["artist", "album", "song"],
+  (kind) => i18n.t(`mediaTypes.musicKinds.${kind}`),
+);
 
 /**
  * The minimum a grid card needs to render. Search results from the live backend arrive in
@@ -84,13 +95,10 @@ export interface SeasonEpisodes {
   episodes: Episode[];
 }
 
-export const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
-  movie: "Movies",
-  tv: "TV",
-  music: "Music",
-  book: "Books",
-  game: "Games",
-};
+export const CONTENT_TYPE_LABELS: Record<ContentType, string> = localizedLabels(
+  ["movie", "tv", "music", "book", "game"],
+  (type) => i18n.t(`mediaTypes.plural.${type}`),
+);
 
 export interface UserPreferences {
   favoriteGenres: string[];

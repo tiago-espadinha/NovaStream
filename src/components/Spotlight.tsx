@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MediaSummary } from '../types';
 import { mediaTypeLabel } from '../utils/discovery';
 import { fallbackArtwork } from '../utils/gradient';
@@ -12,17 +13,18 @@ interface SpotlightProps {
 }
 
 export function Spotlight({ item, favorite, onToggleFavorite, onExplore }: SpotlightProps) {
+  const { t } = useTranslation();
   return (
     <section className="spotlight" aria-labelledby="spotlight-title">
       <div className="spotlight-art">
         {item.posterUrl ? (
-          <img src={item.posterUrl} alt={`${item.title} artwork`} />
+          <img src={item.posterUrl} alt={t('artwork.label', { title: item.title })} />
         ) : (
           <div className="spotlight-fallback" style={fallbackArtwork(item)} aria-hidden="true" />
         )}
       </div>
       <div className="spotlight-copy">
-        <p className="eyebrow">Featured after dark · {mediaTypeLabel(item)}</p>
+        <p className="eyebrow">{t('spotlight.eyebrow', { type: mediaTypeLabel(item) })}</p>
         <h2 id="spotlight-title" className="spotlight-title">
           {item.title}
         </h2>
@@ -34,7 +36,7 @@ export function Spotlight({ item, favorite, onToggleFavorite, onExplore }: Spotl
         {item.overview && <p className="spotlight-synopsis">{item.overview}</p>}
         <div className="spotlight-actions">
           <button type="button" className="btn btn-primary" onClick={() => onExplore(item.id)}>
-            Explore
+            {t('spotlight.explore')}
           </button>
           <button
             type="button"
@@ -50,7 +52,7 @@ export function Spotlight({ item, favorite, onToggleFavorite, onExplore }: Spotl
                 secondaryColor="var(--color-text)"
               />
             </span>
-            {favorite ? 'Saved' : 'Save'}
+            {favorite ? t('common.saved') : t('common.save')}
           </button>
         </div>
       </div>

@@ -1,3 +1,5 @@
+import i18n from '../i18n';
+
 // Cmd+K on macOS, Ctrl+K elsewhere. On macOS Ctrl+K stays the text-field
 // "delete to end of line", so only the platform's own modifier counts.
 export type ShortcutKey = Pick<KeyboardEvent, 'key' | 'ctrlKey' | 'metaKey' | 'altKey' | 'shiftKey' | 'isComposing'>;
@@ -14,8 +16,9 @@ export function isMacPlatform(nav: Pick<Navigator, 'platform' | 'userAgent'> = n
   return /mac|iphone|ipad|ipod/i.test(platform);
 }
 
+// `aria` is an aria-keyshortcuts value: spec key names, the same in every language.
 export function searchShortcutLabels(isMac: boolean) {
   return isMac
-    ? { hint: '⌘K', aria: 'Meta+K' }
-    : { hint: 'Ctrl K', aria: 'Control+K' };
+    ? { hint: i18n.t('shortcut.mac'), aria: 'Meta+K' }
+    : { hint: i18n.t('shortcut.other'), aria: 'Control+K' };
 }

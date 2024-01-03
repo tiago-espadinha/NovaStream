@@ -46,7 +46,7 @@ export function SiteFooter() {
         {t('footer.dataFrom')}{' '}
         {DATA_SOURCES.map((source, index) => (
           <span key={source.name}>
-            {index > 0 && (index === DATA_SOURCES.length - 1 ? t('footer.listAnd') : t('footer.listComma'))}
+            {index > 0 && (index === DATA_SOURCES.length - 1 ? t('common.listAnd') : t('common.listComma'))}
             <a href={source.href} target="_blank" rel="noopener noreferrer">
               {source.name}<span className="visually-hidden"> {newTab}</span>
             </a>

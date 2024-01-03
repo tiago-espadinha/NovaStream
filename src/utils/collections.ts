@@ -1,3 +1,4 @@
+import i18n from '../i18n';
 import type { ContentType, MediaSummary } from '../types';
 
 export interface SavedCollection {
@@ -8,17 +9,18 @@ export interface SavedCollection {
   exclusiveGroup?: string;
 }
 
+// Names are read through getters so they follow the active language.
 // The server keeps a copy of these ids (BUILT_IN_COLLECTION_IDS) to validate assignments.
 export const BUILT_IN_COLLECTIONS: SavedCollection[] = [
-  { id: 'to-watch', name: 'To Watch', contentTypes: ['movie', 'tv'], builtIn: true, exclusiveGroup: 'watch' },
-  { id: 'watched', name: 'Watched', contentTypes: ['movie', 'tv'], builtIn: true, exclusiveGroup: 'watch' },
-  { id: 'to-read', name: 'To Read', contentTypes: ['book'], builtIn: true, exclusiveGroup: 'read' },
-  { id: 'read', name: 'Read', contentTypes: ['book'], builtIn: true, exclusiveGroup: 'read' },
-  { id: 'to-listen', name: 'To Listen', contentTypes: ['music'], builtIn: true, exclusiveGroup: 'listen' },
-  { id: 'listened', name: 'Listened', contentTypes: ['music'], builtIn: true, exclusiveGroup: 'listen' },
-  { id: 'to-play', name: 'To Play', contentTypes: ['game'], builtIn: true, exclusiveGroup: 'play' },
-  { id: 'playing', name: 'Playing', contentTypes: ['game'], builtIn: true, exclusiveGroup: 'play' },
-  { id: 'played', name: 'Played', contentTypes: ['game'], builtIn: true, exclusiveGroup: 'play' },
+  { id: 'to-watch', get name() { return i18n.t('collections.builtIn.toWatch'); }, contentTypes: ['movie', 'tv'], builtIn: true, exclusiveGroup: 'watch' },
+  { id: 'watched', get name() { return i18n.t('collections.builtIn.watched'); }, contentTypes: ['movie', 'tv'], builtIn: true, exclusiveGroup: 'watch' },
+  { id: 'to-read', get name() { return i18n.t('collections.builtIn.toRead'); }, contentTypes: ['book'], builtIn: true, exclusiveGroup: 'read' },
+  { id: 'read', get name() { return i18n.t('collections.builtIn.read'); }, contentTypes: ['book'], builtIn: true, exclusiveGroup: 'read' },
+  { id: 'to-listen', get name() { return i18n.t('collections.builtIn.toListen'); }, contentTypes: ['music'], builtIn: true, exclusiveGroup: 'listen' },
+  { id: 'listened', get name() { return i18n.t('collections.builtIn.listened'); }, contentTypes: ['music'], builtIn: true, exclusiveGroup: 'listen' },
+  { id: 'to-play', get name() { return i18n.t('collections.builtIn.toPlay'); }, contentTypes: ['game'], builtIn: true, exclusiveGroup: 'play' },
+  { id: 'playing', get name() { return i18n.t('collections.builtIn.playing'); }, contentTypes: ['game'], builtIn: true, exclusiveGroup: 'play' },
+  { id: 'played', get name() { return i18n.t('collections.builtIn.played'); }, contentTypes: ['game'], builtIn: true, exclusiveGroup: 'play' },
 ];
 
 /** Everything a user has organized: their own collections, which titles are in which, and a card snapshot per title. */
@@ -51,8 +53,8 @@ export function newCollectionProblem(
 ): CollectionProblem | null {
   const trimmed = name.trim().toLowerCase();
   const duplicate = trimmed && collections.find((collection) => collection.name.toLowerCase() === trimmed);
-  if (duplicate) return { field: 'name', message: `You already have a collection called “${duplicate.name}”.` };
-  if (contentTypes.length === 0) return { field: 'formats', message: 'Pick at least one format.' };
+  if (duplicate) return { field: 'name', message: i18n.t('collections.duplicateName', { name: duplicate.name }) };
+  if (contentTypes.length === 0) return { field: 'formats', message: i18n.t('collections.pickFormat') };
   return null;
 }
 

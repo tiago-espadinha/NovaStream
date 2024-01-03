@@ -3,7 +3,8 @@ import * as api from "../services/apiService";
 import { ApiError } from "../services/apiService";
 import { useAuth } from "../context/AuthContext";
 import type { MediaSummary } from "../types";
-import { describeAccountError, describeGuestMerge, isSessionEnded, pluralFavorites } from "../utils/accountErrors";
+import i18n from "../i18n";
+import { describeAccountError, describeGuestMerge, isSessionEnded } from "../utils/accountErrors";
 
 const LOCAL_FAVORITES_KEY = "nova-stream:favorites";
 
@@ -24,9 +25,9 @@ function readLocalFavorites(): MediaSummary[] {
 }
 
 function notReadyMessage(merging: boolean, status: SavedListStatus): string {
-  if (merging) return "Still adding favorites from this browser to your account. Try again in a moment.";
-  if (status === "error") return "Your favorites couldn’t be loaded, so they can’t be changed yet. Open Saved and choose Try again.";
-  return "Your favorites are still loading. Try again in a moment.";
+  if (merging) return i18n.t("favorites.merging");
+  if (status === "error") return i18n.t("favorites.loadFailed");
+  return i18n.t("favorites.loading");
 }
 
 interface AccountFavorites {
@@ -128,7 +129,7 @@ export function useFavorites() {
         setAccount({ token, media: latest, status: "ready" });
         setLocalSavedMedia(readLocalFavorites().filter((media) => !moved.has(media.id)));
         const notice = limitMessage
-          ? { message: `${limitMessage} ${pluralFavorites(notAdded)} from this browser stay here for now.`, error: true }
+          ? { message: i18n.t("account.mergeLimit", { message: limitMessage, count: notAdded }), error: true }
           : describeGuestMerge(toUpload.length - notAdded, notAdded);
         if (notice) setNotice(notice);
       } finally {
@@ -166,7 +167,7 @@ export function useFavorites() {
         if (!favoriteIds.has(item.id) && !guestSaveExplained.current) {
           guestSaveExplained.current = true;
           setNotice({
-            message: `Saved “${item.title}” in this browser. Sign in to keep your favorites on any device.`,
+            message: i18n.t("favorites.guestSaved", { title: item.title }),
             error: false,
             offerSignIn: true,
           });
@@ -190,9 +191,9 @@ export function useFavorites() {
         setAccount({ token, media: res.savedMedia, status: "ready" });
       } catch (err) {
         if (isSessionEnded(err)) {
-          endSession(`Your session expired, so “${item.title}” wasn’t ${removing ? "removed" : "saved"}. Sign in and try again.`);
+          endSession(i18n.t(removing ? "favorites.sessionExpiredRemoving" : "favorites.sessionExpiredSaving", { title: item.title }));
         } else {
-          const fallback = removing ? `Couldn’t remove “${item.title}”. Try again.` : `Couldn’t save “${item.title}”. Try again.`;
+          const fallback = i18n.t(removing ? "favorites.removeFailed" : "favorites.saveFailed", { title: item.title });
           setNotice({ message: describeAccountError(err, fallback), error: true });
         }
       } finally {

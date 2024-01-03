@@ -6,15 +6,13 @@ export function isSessionEnded(error: unknown): boolean {
   return error instanceof ApiError && error.status === 401;
 }
 
-export const pluralFavorites = (count: number) => `${count} ${count === 1 ? 'favorite' : 'favorites'}`;
-
 /** One message for a guest-favorites merge, so a partial failure is never hidden behind a success. */
 export function describeGuestMerge(added: number, notAdded: number): { message: string; error: boolean } | null {
   if (notAdded === 0) {
-    return added > 0 ? { message: `Added ${pluralFavorites(added)} from this browser to your account.`, error: false } : null;
+    return added > 0 ? { message: i18n.t('account.mergeAdded', { count: added }), error: false } : null;
   }
-  const kept = `${pluralFavorites(notAdded)} couldn’t be added yet and stay in this browser; they’ll be tried again next time.`;
-  return { message: added > 0 ? `Added ${pluralFavorites(added)} to your account. ${kept}` : kept, error: true };
+  const kept = i18n.t('account.mergeKept', { count: notAdded });
+  return { message: added > 0 ? `${i18n.t('account.mergeAddedPartial', { count: added })} ${kept}` : kept, error: true };
 }
 
 /**
