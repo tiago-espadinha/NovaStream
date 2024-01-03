@@ -1,4 +1,7 @@
+import { useTranslation } from 'react-i18next';
+import { currentLocale } from '../../i18n';
 import type { MediaSummary } from '../../types';
+import { parseNumericValue } from '../../utils/contentFilters';
 import playcount from '../../utils/playcount';
 import PlayIcon from '../PlayIcon/PlayIcon';
 import StarIcon from '../StarIcon/StarIcon';
@@ -11,9 +14,9 @@ interface ScoreBadgeProps {
 }
 
 export function ScoreBadge({ item, fallback = '—' }: ScoreBadgeProps) {
+  const { t } = useTranslation();
   if (item.type === 'music') {
-    const plays =
-      item.rating ?? (item.playStats?.playcount ? Number(item.playStats.playcount.replace(/\D/g, '')) : null);
+    const plays = item.rating ?? (item.playStats?.playcount ? parseNumericValue(item.playStats.playcount) : null);
     return (
       <span className="score music">
         <span aria-hidden="true">
@@ -21,7 +24,7 @@ export function ScoreBadge({ item, fallback = '—' }: ScoreBadgeProps) {
         </span>
         {plays != null ? (
           <>
-            <span className="visually-hidden">Plays: </span>
+            <span className="visually-hidden">{t('scoreBadge.plays')}</span>
             {playcount(plays)}
           </>
         ) : (
@@ -37,8 +40,10 @@ export function ScoreBadge({ item, fallback = '—' }: ScoreBadgeProps) {
       </span>
       {item.rating != null ? (
         <>
-          <span className="visually-hidden">Rating: </span>
-          {item.rating.toFixed(1)}
+          <span className="visually-hidden">{t('scoreBadge.rating')}</span>
+          {new Intl.NumberFormat(currentLocale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(
+            item.rating,
+          )}
         </>
       ) : (
         fallback

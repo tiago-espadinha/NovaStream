@@ -8,6 +8,7 @@ describe('describeGuestMerge', () => {
       message: 'Added 2 favorites from this browser to your account.',
       error: false,
     });
+    expect(describeGuestMerge(1, 0)?.message).toBe('Added 1 favorite from this browser to your account.');
     expect(describeGuestMerge(0, 0)).toBeNull();
   });
 

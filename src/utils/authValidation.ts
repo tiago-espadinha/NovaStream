@@ -1,12 +1,14 @@
+import i18n from '../i18n';
+
 export type FieldErrors = { email?: string; password?: string };
 
 /** Client-side checks run before submitting; the server still validates. */
 export function validateCredentials(email: string, password: string): FieldErrors {
   const errors: FieldErrors = {};
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-    errors.email = 'Enter a valid email address, like you@example.com.';
+    errors.email = i18n.t('validation.email');
   }
-  if (password.length < 8) errors.password = 'Password must be at least 8 characters.';
+  if (password.length < 8) errors.password = i18n.t('validation.passwordMin', { min: MIN_PASSWORD });
   return errors;
 }
 
@@ -18,12 +20,12 @@ const MIN_PASSWORD = 8;
 
 export function validatePasswordChange(currentPassword: string, newPassword: string): PasswordChangeErrors {
   const errors: PasswordChangeErrors = {};
-  if (!currentPassword) errors.currentPassword = 'Enter your current password.';
-  if (newPassword.length < MIN_PASSWORD) errors.newPassword = `Password must be at least ${MIN_PASSWORD} characters.`;
+  if (!currentPassword) errors.currentPassword = i18n.t('validation.currentPasswordRequired');
+  if (newPassword.length < MIN_PASSWORD) errors.newPassword = i18n.t('validation.passwordMin', { min: MIN_PASSWORD });
   else if (new TextEncoder().encode(newPassword).length > MAX_PASSWORD_BYTES) {
-    errors.newPassword = 'Password must be at most 72 characters.';
+    errors.newPassword = i18n.t('validation.passwordMax', { max: MAX_PASSWORD_BYTES });
   } else if (newPassword === currentPassword) {
-    errors.newPassword = 'Choose a password different from your current one.';
+    errors.newPassword = i18n.t('validation.passwordUnchanged');
   }
   return errors;
 }

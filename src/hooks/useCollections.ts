@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../services/apiService';
 import { useAuth } from '../context/AuthContext';
+import i18n from '../i18n';
 import type { ContentType, MediaSummary } from '../types';
 import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
 import {
@@ -143,7 +144,7 @@ export function useCollections() {
         const merged = isEmptyCollections(guest) ? null : pruned(mergeCollections(collections, guest));
         if (merged && exceedsLimits(merged)) {
           setSaveError(
-            `Your collections from this browser couldn’t be added: an account holds up to ${MAX_CUSTOM_COLLECTIONS} collections and ${MAX_ORGANIZED_TITLES} organized titles. They’re still saved in this browser.`,
+            i18n.t('collections.mergeTooLarge', { collections: MAX_CUSTOM_COLLECTIONS, titles: MAX_ORGANIZED_TITLES }),
           );
         }
         const merging = merged !== null && !exceedsLimits(merged);
@@ -176,7 +177,7 @@ export function useCollections() {
         } catch (err) {
           if (job.token !== tokenRef.current) continue;
           if (isSessionEnded(err)) endSession();
-          else setSaveError(describeAccountError(err, 'Couldn’t save your collection changes.'));
+          else setSaveError(describeAccountError(err, i18n.t('collections.saveFailed')));
           return;
         }
         if (job.token !== tokenRef.current) continue;
@@ -184,8 +185,8 @@ export function useCollections() {
         if (dropped > 0) {
           setSaveError(
             guestMergedInto.current === job.token
-              ? 'Some collections from this browser couldn’t be added to your account. They’re still saved in this browser.'
-              : 'Some collection changes couldn’t be saved and were undone.',
+              ? i18n.t('collections.mergePartial')
+              : i18n.t('collections.changesUndone'),
           );
         } else {
           setSaveError(null);
@@ -225,9 +226,7 @@ export function useCollections() {
       }
       if (!accountReady) {
         setSaveError(
-          account.status === 'error'
-            ? 'Your collections couldn’t be loaded, so they can’t be changed yet. Open Saved and choose Try again.'
-            : 'Your collections are still loading. Try again in a moment.',
+          account.status === 'error' ? i18n.t('collections.loadFailed') : i18n.t('collections.stillLoading'),
         );
         return false;
       }
@@ -251,7 +250,7 @@ export function useCollections() {
       if (!collection || !collection.contentTypes.includes(item.type)) return;
       const organized = Object.keys(doc.assignments).length;
       if (!(item.id in doc.assignments) && organized >= MAX_ORGANIZED_TITLES) {
-        setSaveError(`You can organize up to ${MAX_ORGANIZED_TITLES} titles in collections. Remove some to add more.`);
+        setSaveError(i18n.t('collections.titleLimit', { max: MAX_ORGANIZED_TITLES }));
         return;
       }
 
@@ -289,7 +288,7 @@ export function useCollections() {
       )
         return null;
       if (doc.custom.length >= MAX_CUSTOM_COLLECTIONS) {
-        setSaveError(`You can have up to ${MAX_CUSTOM_COLLECTIONS} collections. Delete one to add another.`);
+        setSaveError(i18n.t('collections.collectionLimit', { max: MAX_CUSTOM_COLLECTIONS }));
         return null;
       }
       // A title new to collections counts toward the organized-title cap; past it, the collection
@@ -299,7 +298,7 @@ export function useCollections() {
           ? item
           : undefined;
       if (item && !assignable) {
-        setSaveError(`You can organize up to ${MAX_ORGANIZED_TITLES} titles in collections. Remove some to add more.`);
+        setSaveError(i18n.t('collections.titleLimit', { max: MAX_ORGANIZED_TITLES }));
       }
       const id = `custom-${globalThis.crypto?.randomUUID?.() ?? Date.now()}`;
       const collection = { id, name: normalizedName, contentTypes };
