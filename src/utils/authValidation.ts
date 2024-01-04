@@ -8,7 +8,7 @@ export function validateCredentials(email: string, password: string): FieldError
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
     errors.email = i18n.t('validation.email');
   }
-  if (password.length < 8) errors.password = i18n.t('validation.passwordMin', { min: MIN_PASSWORD });
+  if (password.length < MIN_PASSWORD) errors.password = i18n.t('validation.passwordMin', { min: MIN_PASSWORD });
   return errors;
 }
 
@@ -16,7 +16,7 @@ export type PasswordChangeErrors = { currentPassword?: string; newPassword?: str
 
 // The server counts bytes, because bcrypt ignores everything past 72 of them.
 const MAX_PASSWORD_BYTES = 72;
-const MIN_PASSWORD = 8;
+export const MIN_PASSWORD = 8;
 
 export function validatePasswordChange(currentPassword: string, newPassword: string): PasswordChangeErrors {
   const errors: PasswordChangeErrors = {};
