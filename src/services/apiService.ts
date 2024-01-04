@@ -1,4 +1,5 @@
 import { API_BASE_URL } from '../config';
+import { currentLocale } from '../i18n';
 import type {
   AuthUser,
   ContentItem,
@@ -16,10 +17,13 @@ export type ApiErrorCode = ProviderErrorCode | 'wrong_password' | 'rate_limited'
 export class ApiError extends Error {
   status: number;
   code?: ApiErrorCode;
-  constructor(status: number, message: string, code?: ApiErrorCode) {
+  /** Seconds until a rate-limited request may be retried, when the server says. */
+  retryAfterSeconds?: number;
+  constructor(status: number, message: string, code?: ApiErrorCode, retryAfterSeconds?: number) {
     super(message);
     this.status = status;
     this.code = code;
+    this.retryAfterSeconds = retryAfterSeconds;
   }
 }
 
@@ -35,12 +39,20 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError(res.status, body.error || `Request failed with ${res.status}`, body.code);
+    const wait = body.retryAfterSeconds;
+    const retryAfterSeconds = typeof wait === 'number' && Number.isFinite(wait) && wait >= 0 ? wait : undefined;
+    throw new ApiError(res.status, body.error || `Request failed with ${res.status}`, body.code, retryAfterSeconds);
   }
   return body as T;
 }
 
 // ---- search & media detail (public, no auth required) ----
+
+/** TMDb content follows the viewer's language; the server falls back to English for anything unknown. */
+function withLang(path: string, params = new URLSearchParams()) {
+  params.set('lang', currentLocale());
+  return `${path}?${params.toString()}`;
+}
 
 export interface SearchError {
   type: ContentType;
@@ -58,20 +70,20 @@ export function searchMedia(
   musicKind: MusicKind | 'all' = 'all',
 ) {
   const params = new URLSearchParams({ q: query, type, musicKind });
-  return request<SearchResponse>(`/search?${params.toString()}`);
+  return request<SearchResponse>(withLang('/search', params));
 }
 
 // Same shape as search: items from every source that answered, plus one error per source that didn't.
 export function getTrending() {
-  return request<SearchResponse>('/trending');
+  return request<SearchResponse>(withLang('/trending'));
 }
 
 export function getMediaDetail(type: ContentType, externalId: string) {
-  return request<ContentItem>(`/media/${type}/${externalId}`);
+  return request<ContentItem>(withLang(`/media/${type}/${externalId}`));
 }
 
 export function getTvSeason(externalId: string, season: number) {
-  return request<SeasonEpisodes>(`/media/tv/${encodeURIComponent(externalId)}/season/${season}`);
+  return request<SeasonEpisodes>(withLang(`/media/tv/${encodeURIComponent(externalId)}/season/${season}`));
 }
 
 /** `externalId` is the artist id after "music-", already URI-encoded like `getMediaDetail`'s. */

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { StatusIcon } from './StatusIcon';
 
 export interface AccountNotice {
@@ -15,6 +16,7 @@ export interface AccountNotice {
  * readers announce messages as they appear.
  */
 export function AccountNotices({ notices }: { notices: AccountNotice[] }) {
+  const { t } = useTranslation();
   const regionRef = useRef<HTMLDivElement>(null);
 
   // The notices float over the page; publish their height so the page can keep focused
@@ -51,10 +53,10 @@ export function AccountNotices({ notices }: { notices: AccountNotice[] }) {
             <button
               type="button"
               className="btn btn-ghost"
-              aria-label={`Dismiss: ${notice.message}`}
+              aria-label={t('notices.dismissNotice', { message: notice.message })}
               onClick={notice.onDismiss}
             >
-              Dismiss
+              {t('common.dismiss')}
             </button>
           </div>
         </div>

@@ -43,6 +43,7 @@ const realFetch = globalThis.fetch;
 let server;
 let baseUrl;
 let tmdbCalls;
+let tmdbLanguages;
 let tmdbReply;
 let originalApiKey;
 let originalWarn;
@@ -58,6 +59,7 @@ after(() => server.close());
 
 beforeEach(() => {
   tmdbCalls = [];
+  tmdbLanguages = [];
   tmdbReply = { ok: true, json: async () => ({}) };
   originalApiKey = process.env.TMDB_API_KEY;
   process.env.TMDB_API_KEY = 'secret-tmdb-key';
@@ -67,6 +69,7 @@ beforeEach(() => {
     const url = new URL(input);
     if (url.hostname !== 'api.themoviedb.org') return realFetch(input, init);
     tmdbCalls.push(url.pathname);
+    tmdbLanguages.push(url.searchParams.get('language'));
     return tmdbReply;
   };
 });
@@ -157,4 +160,21 @@ test("serves an artist's albums and refuses ids that aren't an artist", async (t
   const notArtist = await fetch(`${baseUrl}/music/${encodeURIComponent('album|||AC/DC|||Back in Black')}/albums`);
   assert.equal(notArtist.status, 404);
   assert.equal(artists.length, 1);
+});
+
+test('forwards a supported language to TMDb and falls back to English for anything else', async () => {
+  tmdbReply = { ok: true, json: async () => ({ id: 42, name: 'Show', overview: 'x', 'watch/providers': { results: {} } }) };
+
+  await fetch(`${baseUrl}/tv/42?lang=fr`);
+  await fetch(`${baseUrl}/tv/42/season/1?lang=pt-PT`);
+  await fetch(`${baseUrl}/movie/42?lang=es`);
+  assert.deepEqual(tmdbLanguages, ['fr-FR', 'pt-PT', 'es-ES']);
+
+  tmdbLanguages.length = 0;
+  for (const query of ['', '?lang=', '?lang=xx', '?lang=fr&lang=es', '?lang[]=fr', '?lang=fr-FR&x=1', '?lang=__proto__']) {
+    await fetch(`${baseUrl}/tv/42${query}`);
+    await fetch(`${baseUrl}/tv/42/season/1${query}`);
+  }
+  assert.equal(tmdbLanguages.length, 14);
+  assert.deepEqual([...new Set(tmdbLanguages)], ['en-US']);
 });

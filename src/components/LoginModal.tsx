@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useDialog } from '../hooks/useDialog';
 import { StatusIcon } from './StatusIcon';
-import { validateCredentials, type FieldErrors } from '../utils/authValidation';
+import { MIN_PASSWORD, validateCredentials, type FieldErrors } from '../utils/authValidation';
 
 interface LoginModalProps {
   onClose: () => void;
 }
 
 export function LoginModal({ onClose }: LoginModalProps) {
+  const { t } = useTranslation();
   const { login, register, loading, error } = useAuth();
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [mode, setMode] = useState<'login' | 'register'>('login');
@@ -50,26 +52,26 @@ export function LoginModal({ onClose }: LoginModalProps) {
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="icon-button auth-close" aria-label="Close" onClick={onClose}>
+        <button type="button" className="icon-button auth-close" aria-label={t('common.close')} onClick={onClose}>
           <span aria-hidden="true">✕</span>
         </button>
-        <p className="eyebrow">Your account</p>
+        <p className="eyebrow">{t('account.yourAccount')}</p>
         <h2 id="auth-title" className="auth-title">
-          {mode === 'login' ? 'Welcome back' : 'Create your account'}
+          {mode === 'login' ? t('auth.welcomeBack') : t('auth.createTitle')}
         </h2>
         <p id="auth-subtitle" className="auth-subtitle">
-          Save favorites and preferences across devices — or keep browsing without an account.
+          {t('auth.subtitle')}
         </p>
 
         <form onSubmit={handleSubmit} className="auth-form" aria-busy={loading} noValidate>
           {mode === 'register' && (
             <label>
-              Name <span className="optional">(optional)</span>
+              <Trans i18nKey="auth.nameOptional" components={{ optional: <span className="optional" /> }} />
               <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" />
             </label>
           )}
           <label>
-            Email
+            {t('auth.email')}
             <input
               id="auth-email"
               type="email"
@@ -81,7 +83,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
                 setFieldErrors((current) => ({ ...current, email: undefined }));
               }}
               autoComplete="email"
-              placeholder="you@example.com"
+              placeholder={t('auth.emailPlaceholder')}
               aria-invalid={Boolean(fieldErrors.email)}
               aria-describedby={fieldErrors.email ? 'auth-email-error' : undefined}
             />
@@ -93,7 +95,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
             )}
           </label>
           <label>
-            Password
+            {t('auth.password')}
             <input
               id="auth-password"
               type="password"
@@ -114,7 +116,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
                 {fieldErrors.password}
               </span>
             ) : (
-              <span id="password-hint" className="field-hint">At least 8 characters</span>
+              <span id="password-hint" className="field-hint">{t('auth.passwordHint', { min: MIN_PASSWORD })}</span>
             )}
           </label>
 
@@ -125,7 +127,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           )}
 
           <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'}
+            {loading ? t('auth.wait') : mode === 'login' ? t('common.signIn') : t('auth.createAccount')}
           </button>
         </form>
 
@@ -134,7 +136,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
           className="auth-switch"
           onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
         >
-          {mode === 'login' ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+          {mode === 'login' ? t('auth.noAccount') : t('auth.haveAccount')}
         </button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import type { ContentType } from "../types";
 import type { SavedCollection } from "../utils/collections";
 import { NewCollectionForm } from "./NewCollectionForm";
@@ -27,6 +28,7 @@ export function CollectionMenu({
   onToggleCollection,
   onCreateCollection,
 }: CollectionMenuProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   // What the last creation did, kept as it happened rather than tracking later toggles.
@@ -107,11 +109,14 @@ export function CollectionMenu({
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M4 6h16M4 12h10M4 18h7M18 15v6M15 18h6" />
         </svg>
-        <span className="collection-trigger-label">Collections</span>
+        <span className="collection-trigger-label">{t("collections.menu.trigger")}</span>
         {count > 0 && (
           <span className="count-badge">
-            {count}
-            <span className="visually-hidden"> selected</span>
+            <Trans
+              i18nKey="collections.menu.selectedCount"
+              count={count}
+              components={{ hidden: <span className="visually-hidden" /> }}
+            />
           </span>
         )}
       </button>
@@ -124,12 +129,15 @@ export function CollectionMenu({
           data-placement={position.placement}
           style={{ maxHeight: position.maxHeight }}
           role="group"
-          aria-label="Collections for this title"
+          aria-label={t("collections.menu.popover")}
         >
           {statuses.length > 0 && (
             <fieldset className="toggle-group">
               <legend>
-                Status <span className="toggle-group-hint">· pick one</span>
+                <Trans
+                  i18nKey="collections.menu.status"
+                  components={{ hint: <span className="toggle-group-hint" /> }}
+                />
               </legend>
               <div className="chip-row">
                 {statuses.map((collection) => (
@@ -144,7 +152,7 @@ export function CollectionMenu({
             </fieldset>
           )}
           <fieldset className="toggle-group">
-            <legend>Your collections</legend>
+            <legend>{t("collections.menu.yours")}</legend>
             {custom.length > 0 ? (
               <div className="chip-row">
                 {custom.map((collection) => (
@@ -157,13 +165,15 @@ export function CollectionMenu({
                 ))}
               </div>
             ) : (
-              <p className="toggle-group-empty">None cover this format yet.</p>
+              <p className="toggle-group-empty">{t("collections.menu.noneCover")}</p>
             )}
             <p className={`popover-created${created ? " field-success" : ""}`} role="status">
               {created && (
                 <>
                   <StatusIcon tone="success" />
-                  {created.added ? `Created “${created.name}” and added this title.` : `Created “${created.name}”.`}
+                  {created.added
+                    ? t("collections.createdAndAdded", { name: created.name })
+                    : t("collections.created", { name: created.name })}
                 </>
               )}
             </p>
@@ -187,11 +197,11 @@ export function CollectionMenu({
                 setCreating(true);
               }}
             >
-              New collection
+              {t("collections.newCollection")}
             </button>
           )}
           <a className="collection-popover-link" href="/saved">
-            Manage collections in Saved
+            {t("collections.menu.manage")}
           </a>
         </div>
       )}

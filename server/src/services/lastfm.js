@@ -510,7 +510,7 @@ async function lastfmDetail(compositeId) {
     type: "music",
     musicKind: "album",
     rating: playcount,
-    overview: bio || "No summary available.",
+    overview: bio || "",
     tags: toArray(a.tags?.tag || [])
       .slice(0, 5)
       .map((t) => t.name),
@@ -518,10 +518,8 @@ async function lastfmDetail(compositeId) {
       .slice(0, 5)
       .map((t) => t.name),
     releaseYear: null,
-    runtime: tracks.length
-      ? `${tracks.length} tracks${mins ? ` · ${mins} min` : ""}`
-      : null,
-    creatorLabel: "Artist",
+    length: tracks.length ? { kind: "tracks", tracks: tracks.length, minutes: mins || null } : null,
+    creatorRole: "artist",
     creator: a.artist.name || a.artist,
     // Last.fm doesn't report real streaming availability — these are search links, not a
     // verified "available here" list.
@@ -590,12 +588,12 @@ function artistDetail(artist, compositeId) {
     type: "music",
     musicKind: "artist",
     rating: Number(stats.playcount) || 0,
-    overview: wikiText(artist.bio) || "No summary available.",
+    overview: wikiText(artist.bio) || "",
     tags,
     genres: tags,
     releaseYear: null,
-    runtime: null,
-    creatorLabel: "Artist",
+    length: null,
+    creatorRole: "artist",
     creator: name,
     platforms: ["Search on Spotify", "Search on Apple Music", "Search on YouTube Music"],
     posterUrl: bestImage(artist.image),
@@ -625,8 +623,8 @@ function songDetail(track, requestedArtist, requestedTitle, compositeId) {
     tags,
     genres: tags,
     releaseYear: null,
-    runtime: Number(track.duration) ? `${Math.floor(Number(track.duration) / 60000)}:${String(Math.floor((Number(track.duration) % 60000) / 1000)).padStart(2, "0")}` : null,
-    creatorLabel: "Artist",
+    length: Number(track.duration) ? { kind: "duration", seconds: Math.floor(Number(track.duration) / 1000) } : null,
+    creatorRole: "artist",
     creator: artist,
     platforms: ["Search on Spotify", "Search on Apple Music", "Search on YouTube Music"],
     posterUrl: bestImage(track.album?.image || track.image),

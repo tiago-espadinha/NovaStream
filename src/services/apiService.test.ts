@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_BASE_URL } from '../config';
-import { ApiError, changePassword, deleteAccount } from './apiService';
+import { ApiError, changePassword, deleteAccount, getMediaDetail, getTrending, getTvSeason, searchMedia } from './apiService';
+
+// Only English has a catalog so far, so the active locale is stubbed to cover the others.
+let locale = 'en';
+vi.mock('../i18n', () => ({ currentLocale: () => locale }));
 
 function stubFetch(status: number, body?: unknown) {
   const fetchMock = vi.fn(async () =>
@@ -42,6 +46,49 @@ describe('changePassword', () => {
     stubFetch(429, { error: message, code: 'rate_limited', retryAfterSeconds: 900 });
     const error = await changePassword('tok', 'nope', 'new secret').catch((err: unknown) => err);
     expect(error).toMatchObject({ status: 429, code: 'rate_limited', message });
+  });
+});
+
+describe('rate-limit wait', () => {
+  const failWith = async (body: unknown) => {
+    stubFetch(429, body);
+    return changePassword('tok', 'a', 'b').then(() => { throw new Error("expected rejection"); }, (err: unknown) => err as ApiError);
+  };
+
+  it('lands the server’s retryAfterSeconds on the error', async () => {
+    expect((await failWith({ error: 'x', code: 'rate_limited', retryAfterSeconds: 900 })).retryAfterSeconds).toBe(900);
+    expect((await failWith({ error: 'x', code: 'rate_limited', retryAfterSeconds: 0 })).retryAfterSeconds).toBe(0);
+  });
+
+  it('leaves it undefined when missing, non-numeric, negative, or not finite', async () => {
+    for (const retryAfterSeconds of [undefined, '900', null, -1, Number.NaN, { n: 1 }]) {
+      const error = await failWith({ error: 'x', code: 'rate_limited', retryAfterSeconds });
+      expect(error.retryAfterSeconds).toBeUndefined();
+    }
+  });
+});
+
+describe('language on TMDb-backed requests', () => {
+  afterEach(() => {
+    locale = 'en';
+  });
+
+  const requestedUrl = async (call: () => Promise<unknown>, next = 'en') => {
+    locale = next;
+    const fetchMock = stubFetch(200, {});
+    await call();
+    return lastRequest(fetchMock).url;
+  };
+
+  it('appends the active locale after the existing search params', async () => {
+    const url = await requestedUrl(() => searchMedia('a b&c', 'movie', 'all'), 'fr');
+    expect(url).toBe(`${API_BASE_URL}/search?q=a+b%26c&type=movie&musicKind=all&lang=fr`);
+  });
+
+  it('adds it as the only param where there were none, encoded', async () => {
+    expect(await requestedUrl(() => getTrending(), 'pt-PT')).toBe(`${API_BASE_URL}/trending?lang=pt-PT`);
+    expect(await requestedUrl(() => getMediaDetail('movie', '603'))).toBe(`${API_BASE_URL}/media/movie/603?lang=en`);
+    expect(await requestedUrl(() => getTvSeason('42', 2), 'es')).toBe(`${API_BASE_URL}/media/tv/42/season/2?lang=es`);
   });
 });
 

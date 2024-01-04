@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { MediaSummary } from "../types";
 import { mediaTypeLabel } from "../utils/discovery";
 import { fallbackArtwork } from "../utils/gradient";
@@ -26,6 +27,7 @@ export function ContentCard({
   onToggleCollection,
   headingLevel = 3,
 }: ContentCardProps) {
+  const { t } = useTranslation();
   const Title = headingLevel === 4 ? "h4" : "h3";
   return (
     <article className="card" data-id={item.id}>
@@ -54,7 +56,7 @@ export function ContentCard({
       <button
         type="button"
         className={`card-save${favorite ? " saved" : ""}`}
-        aria-label={`Save ${item.title}`}
+        aria-label={t("cards.save", { title: item.title })}
         aria-pressed={favorite}
         onClick={() => onToggleFavorite(item)}
       >
@@ -67,7 +69,9 @@ export function ContentCard({
       </button>
       {collectionOptions && onToggleCollection && collectionOptions.length > 0 && (
         <details className="card-collection">
-          <summary>Collections{collectionIds.length > 0 ? ` · ${collectionIds.length}` : ''}</summary>
+          <summary>
+            {collectionIds.length > 0 ? t('cards.collectionsCount', { count: collectionIds.length }) : t('cards.collections')}
+          </summary>
           <div className="card-collection-options">
             {collectionOptions.map((collection) => (
               <label key={collection.id}>

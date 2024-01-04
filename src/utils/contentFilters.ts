@@ -43,7 +43,8 @@ function matchesLabel(labels: string[], query: string): boolean {
   return labels.some((label) => label.toLowerCase().includes(normalizedQuery));
 }
 
-function parseNumericValue(value: number | string | null | undefined): number {
+/** Reads a count the server sent as English-formatted text ("1,234,567"); 0 when it isn't a number. */
+export function parseNumericValue(value: number | string | null | undefined): number {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
   if (typeof value === 'string') {
     const cleaned = value.replace(/[^\d.]/g, '');

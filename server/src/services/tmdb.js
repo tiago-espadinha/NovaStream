@@ -1,5 +1,6 @@
 import { buildId } from "./normalize.js";
 import { ProviderError, upstreamFailure } from "./providerError.js";
+import { TMDB_LANGUAGES } from "../utils/lang.js";
 
 const BASE = "https://api.themoviedb.org/3";
 const WATCH_REGION = "US"; // TMDb providers are region-specific; swap or make configurable later.
@@ -43,10 +44,12 @@ function key() {
   return k;
 }
 
-async function tmdbFetch(pathname, params = {}) {
+async function tmdbFetch(pathname, params = {}, lang = "en") {
   const url = new URL(`${BASE}${pathname}`);
   url.searchParams.set("api_key", key());
-  for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
+  for (const [k, v] of Object.entries({ language: TMDB_LANGUAGES[lang], ...params })) {
+    url.searchParams.set(k, v);
+  }
   const res = await fetch(url);
   if (!res.ok) throw upstreamFailure("TMDb", res);
   return res.json();
@@ -85,36 +88,36 @@ function watchProviders(data) {
   return out;
 }
 
-export async function searchMovies(query) {
+export async function searchMovies(query, lang = "en") {
   const data = await tmdbFetch("/search/movie", {
     query,
     include_adult: "false",
-  });
+  }, lang);
   return (data.results || [])
     .map((r) => summarize(r, "movie"))
     .filter((movie) => movie.rating !== null && movie.rating !== 0);
 }
 
-export async function searchTv(query) {
-  const data = await tmdbFetch("/search/tv", { query, include_adult: "false" });
+export async function searchTv(query, lang = "en") {
+  const data = await tmdbFetch("/search/tv", { query, include_adult: "false" }, lang);
   return (data.results || []).map((r) =>
     summarize(r, "tv")).filter((tv) => tv.rating !== null && tv.rating !== 0);
 }
 
 // New releases often trend before anyone has rated them; show "no rating" rather than 0.
-async function trending(type) {
-  const data = await tmdbFetch(`/trending/${type}/week`);
+async function trending(type, lang) {
+  const data = await tmdbFetch(`/trending/${type}/week`, {}, lang);
   return (data.results || [])
     .map((result) => summarize(result, type))
     .map((item) => (item.rating === 0 ? { ...item, rating: null } : item));
 }
 
-export function trendingMovies() {
-  return trending("movie");
+export function trendingMovies(lang = "en") {
+  return trending("movie", lang);
 }
 
-export function trendingTv() {
-  return trending("tv");
+export function trendingTv(lang = "en") {
+  return trending("tv", lang);
 }
 
 function normalizeLabel(value) {
@@ -128,55 +131,51 @@ function findGenreIds(genre) {
     .map(([id]) => id);
 }
 
-async function discover(type, params) {
+async function discover(type, params, lang) {
   const data = await tmdbFetch(`/discover/${type}`, {
     ...params,
     sort_by: "popularity.desc",
     include_adult: "false",
-  });
+  }, lang);
   return (data.results || [])
     .map((result) => summarize(result, type))
     .filter((item) => item.rating !== null && item.rating !== 0);
 }
 
-async function discoverByGenre(type, genre) {
+async function discoverByGenre(type, genre, lang) {
   const genreIds = findGenreIds(genre);
   if (!genreIds.length) return [];
-  return discover(type, { with_genres: genreIds.join("|") });
+  return discover(type, { with_genres: genreIds.join("|") }, lang);
 }
 
-async function discoverByKeyword(type, tag) {
-  const data = await tmdbFetch("/search/keyword", { query: tag });
+async function discoverByKeyword(type, tag, lang) {
+  const data = await tmdbFetch("/search/keyword", { query: tag }, lang);
   const target = normalizeLabel(tag);
   const keywords = (data.results || []).filter(
     (keyword) => normalizeLabel(keyword.name).includes(target),
   );
   const resultSets = await Promise.all(
-    keywords.slice(0, 3).map((keyword) => discover(type, { with_keywords: String(keyword.id) })),
+    keywords.slice(0, 3).map((keyword) => discover(type, { with_keywords: String(keyword.id) }, lang)),
   );
   const uniqueResults = new Map();
   for (const item of resultSets.flat()) uniqueResults.set(item.id, item);
   return [...uniqueResults.values()];
 }
 
-export function searchMoviesByGenre(genre) {
-  return discoverByGenre("movie", genre);
+export function searchMoviesByGenre(genre, lang = "en") {
+  return discoverByGenre("movie", genre, lang);
 }
 
-export function searchTvByGenre(genre) {
-  return discoverByGenre("tv", genre);
+export function searchTvByGenre(genre, lang = "en") {
+  return discoverByGenre("tv", genre, lang);
 }
 
-export function searchMoviesByTag(tag) {
-  return discoverByKeyword("movie", tag);
+export function searchMoviesByTag(tag, lang = "en") {
+  return discoverByKeyword("movie", tag, lang);
 }
 
-export function searchTvByTag(tag) {
-  return discoverByKeyword("tv", tag);
-}
-
-function seasonName(number, name) {
-  return name || (number === 0 ? "Specials" : `Season ${number}`);
+export function searchTvByTag(tag, lang = "en") {
+  return discoverByKeyword("tv", tag, lang);
 }
 
 // TMDb lists specials (season 0) first; regular seasons read better ahead of them.
@@ -185,32 +184,43 @@ function seasonList(seasons) {
     .filter((season) => Number.isInteger(season?.season_number) && season.season_number >= 0)
     .map((season) => ({
       number: season.season_number,
-      name: seasonName(season.season_number, season.name),
+      // Null when TMDb has none; the client renders "Specials" or "Season N".
+      name: season.name || null,
       episodeCount: season.episode_count ?? 0,
     }))
     .sort((a, b) => (a.number === 0) - (b.number === 0) || a.number - b.number);
 }
 
-export async function getMovieDetail(id) {
+// TMDb has no overview in some languages; the English one beats an empty box.
+async function overviewOf(raw, path, lang) {
+  if (raw.overview?.trim() || lang === "en") return raw.overview || "";
+  try {
+    const english = await tmdbFetch(path, {}, "en");
+    return english.overview || "";
+  } catch {
+    return "";
+  }
+}
+
+// Detail genres stay English: the client's `genre:` search matches on those names.
+const englishGenres = (genres) => (genres || []).map((g) => GENRE_NAMES[g.id] ?? g.name);
+
+export async function getMovieDetail(id, lang = "en") {
   const raw = await tmdbFetch(`/movie/${id}`, {
     append_to_response: "credits,watch/providers",
-  });
+  }, lang);
   const director = raw.credits?.crew?.find((c) => c.job === "Director");
-  const hours = Math.floor((raw.runtime || 0) / 60);
-  const mins = (raw.runtime || 0) % 60;
   return {
     id: buildId("movie", raw.id),
     title: raw.title,
     type: "movie",
     rating: raw.vote_average ?? null,
-    overview: raw.overview || "",
-    genres: (raw.genres || []).map((g) => g.name),
+    overview: await overviewOf(raw, `/movie/${id}`, lang),
+    genres: englishGenres(raw.genres),
     releaseYear: raw.release_date ? Number(raw.release_date.slice(0, 4)) : null,
-    runtime: raw.runtime
-      ? `${hours}h ${mins.toString().padStart(2, "0")}m`
-      : null,
-    creatorLabel: "Director",
-    creator: director?.name || "Unknown",
+    length: raw.runtime > 0 ? { kind: "minutes", minutes: raw.runtime } : null,
+    creatorRole: "director",
+    creator: director?.name || null,
     cast: (raw.credits?.cast || []).slice(0, 6).map((c) => c.name),
     platforms: watchProviders(raw["watch/providers"]),
     posterUrl: raw.poster_path
@@ -219,24 +229,28 @@ export async function getMovieDetail(id) {
   };
 }
 
-export async function getTvDetail(id) {
+export async function getTvDetail(id, lang = "en") {
   const raw = await tmdbFetch(`/tv/${id}`, {
     append_to_response: "credits,watch/providers",
-  });
+  }, lang);
   const creator = raw.created_by?.[0];
   return {
     id: buildId("tv", raw.id),
     title: raw.name,
     type: "tv",
     rating: raw.vote_average ?? null,
-    overview: raw.overview || "",
-    genres: (raw.genres || []).map((g) => g.name),
+    overview: await overviewOf(raw, `/tv/${id}`, lang),
+    genres: englishGenres(raw.genres),
     releaseYear: raw.first_air_date
       ? Number(raw.first_air_date.slice(0, 4))
       : null,
-    runtime: `${raw.number_of_seasons ?? "?"} season${raw.number_of_seasons === 1 ? "" : "s"} · ${raw.number_of_episodes ?? "?"} episodes`,
-    creatorLabel: "Creator",
-    creator: creator?.name || "Unknown",
+    length: {
+      kind: "seasons",
+      seasons: raw.number_of_seasons ?? null,
+      episodes: raw.number_of_episodes ?? null,
+    },
+    creatorRole: "creator",
+    creator: creator?.name || null,
     cast: (raw.credits?.cast || []).slice(0, 6).map((c) => c.name),
     platforms: watchProviders(raw["watch/providers"]),
     posterUrl: raw.poster_path
@@ -246,16 +260,16 @@ export async function getTvDetail(id) {
   };
 }
 
-export async function getTvSeason(id, season) {
-  const raw = await tmdbFetch(`/tv/${id}/season/${season}`);
+export async function getTvSeason(id, season, lang = "en") {
+  const raw = await tmdbFetch(`/tv/${id}/season/${season}`, {}, lang);
   return {
     number: season,
-    name: seasonName(season, raw.name),
+    name: raw.name || null,
     episodes: (raw.episodes || [])
       .filter((episode) => Number.isInteger(episode?.episode_number))
       .map((episode) => ({
         number: episode.episode_number,
-        title: episode.name || `Episode ${episode.episode_number}`,
+        title: episode.name || null,
         airDate: episode.air_date || null,
       }))
       .sort((a, b) => a.number - b.number),

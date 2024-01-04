@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { useDialog } from '../hooks/useDialog';
 import Spinner from './Spinner';
 import type { LiveProblem } from '../utils/liveErrors';
@@ -14,6 +15,7 @@ interface DetailStatusProps {
 
 /** Stands in for the detail overlay while a live title loads or after it fails. */
 export function DetailStatus({ title, error, onRetry, backTo, onBack, onClose }: DetailStatusProps) {
+  const { t } = useTranslation();
   const panelRef = useDialog<HTMLDivElement>(onClose);
 
   return (
@@ -23,17 +25,17 @@ export function DetailStatus({ title, error, onRetry, backTo, onBack, onClose }:
         className="dialog-panel detail-status"
         role="dialog"
         aria-modal="true"
-        aria-label={error ? 'Couldn’t load details' : 'Loading details'}
+        aria-label={error ? t('detailStatus.errorLabel') : t('detailStatus.loadingLabel')}
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
         {error ? (
           <div role="alert">
-            <h2>{title ? `Couldn’t load “${title}”` : 'Couldn’t load details'}</h2>
+            <h2>{title ? t('detailStatus.errorTitle', { title }) : t('detailStatus.errorLabel')}</h2>
             <p>{error.message}</p>
           </div>
         ) : (
-          <Spinner label="Loading details…" />
+          <Spinner label={t('detailStatus.loading')} />
         )}
         <div className="dialog-actions">
           {error?.retryable && (
@@ -46,16 +48,16 @@ export function DetailStatus({ title, error, onRetry, backTo, onBack, onClose }:
                 onRetry();
               }}
             >
-              Try again
+              {t('common.tryAgain')}
             </button>
           )}
           {backTo && (
             <button type="button" className="btn btn-ghost" onClick={onBack}>
-              Back to {backTo}
+              {t('detailStatus.backTo', { title: backTo })}
             </button>
           )}
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Close
+            {t('common.close')}
           </button>
         </div>
       </div>

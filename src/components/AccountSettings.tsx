@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
 import { useDialog } from '../hooks/useDialog';
 import { ApiError } from '../services/apiService';
 import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
-import { validatePasswordChange, type PasswordChangeErrors } from '../utils/authValidation';
+import { MIN_PASSWORD, validatePasswordChange, type PasswordChangeErrors } from '../utils/authValidation';
 import { StatusIcon } from './StatusIcon';
 
 const isWrongPassword = (error: unknown): error is ApiError =>
@@ -17,6 +18,7 @@ interface AccountSettingsProps {
 
 /** Account settings for the signed-in user: change password, sign out, or delete the account. */
 export function AccountSettings({ onClose, onDeleted }: AccountSettingsProps) {
+  const { t } = useTranslation();
   const { user, logout } = useAuth();
   const panelRef = useDialog<HTMLDivElement>(onClose);
 
@@ -31,20 +33,20 @@ export function AccountSettings({ onClose, onDeleted }: AccountSettingsProps) {
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
       >
-        <button type="button" className="icon-button auth-close" aria-label="Close" onClick={onClose}>
+        <button type="button" className="icon-button auth-close" aria-label={t('common.close')} onClick={onClose}>
           <span aria-hidden="true">✕</span>
         </button>
-        <p className="eyebrow">Your account</p>
+        <p className="eyebrow">{t('account.yourAccount')}</p>
         <h2 id="account-title" className="auth-title account-name-title">
-          {user?.name ?? 'Account'}
+          {user?.name ?? t('header.account')}
         </h2>
         {user && <p className="auth-subtitle account-email">{user.email}</p>}
 
         <ChangePassword onSessionEnded={onClose} />
 
         <section className="account-section" aria-labelledby="account-signout-title">
-          <h3 id="account-signout-title">Sign out</h3>
-          <p>Signs you out on this device. Your saved titles stay in your account.</p>
+          <h3 id="account-signout-title">{t('account.signOutTitle')}</h3>
+          <p>{t('account.signOutBody')}</p>
           <button
             type="button"
             className="btn btn-ghost"
@@ -53,7 +55,7 @@ export function AccountSettings({ onClose, onDeleted }: AccountSettingsProps) {
               onClose();
             }}
           >
-            Sign out
+            {t('account.signOut')}
           </button>
         </section>
 
@@ -108,6 +110,7 @@ function PasswordField({ id, label, value, onChange, autoComplete, error, hint, 
 }
 
 function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
+  const { t } = useTranslation();
   const { changePassword, endSession } = useAuth();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -137,10 +140,10 @@ function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
         endSession();
         onSessionEnded();
       } else if (isWrongPassword(err)) {
-        setErrors({ currentPassword: err.message });
+        setErrors({ currentPassword: t('errors.wrongPassword') });
         document.getElementById('account-current-password')?.focus();
       } else {
-        setFormError(describeAccountError(err, 'Couldn’t change your password. Try again.'));
+        setFormError(describeAccountError(err, t('account.changePasswordFailed')));
       }
     } finally {
       setSaving(false);
@@ -149,11 +152,11 @@ function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
 
   return (
     <section className="account-section" aria-labelledby="account-password-title">
-      <h3 id="account-password-title">Change password</h3>
+      <h3 id="account-password-title">{t('account.changePassword')}</h3>
       <form onSubmit={handleSubmit} className="auth-form" aria-busy={saving} noValidate>
         <PasswordField
           id="account-current-password"
-          label="Current password"
+          label={t('account.currentPassword')}
           value={currentPassword}
           onChange={(value) => {
             setCurrentPassword(value);
@@ -165,7 +168,7 @@ function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
         />
         <PasswordField
           id="account-new-password"
-          label="New password"
+          label={t('account.newPassword')}
           value={newPassword}
           onChange={(value) => {
             setNewPassword(value);
@@ -173,7 +176,7 @@ function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
           }}
           autoComplete="new-password"
           error={errors.newPassword}
-          hint="At least 8 characters. Your other devices will be signed out."
+          hint={t('account.newPasswordHint', { min: MIN_PASSWORD })}
         />
         {formError && (
           <p className="auth-error" role="alert">
@@ -185,12 +188,12 @@ function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
           {saved && (
             <>
               <StatusIcon tone="success" />
-              Password changed. Your other devices are signed out.
+              {t('account.passwordChanged')}
             </>
           )}
         </p>
         <button type="submit" className="btn btn-primary" disabled={saving}>
-          {saving ? 'Changing…' : 'Change password'}
+          {saving ? t('account.changing') : t('account.changePassword')}
         </button>
       </form>
     </section>
@@ -198,6 +201,7 @@ function ChangePassword({ onSessionEnded }: { onSessionEnded: () => void }) {
 }
 
 function DeleteAccount({ onDeleted, onSessionEnded }: { onDeleted: () => void; onSessionEnded: () => void }) {
+  const { t } = useTranslation();
   const { deleteAccount, endSession } = useAuth();
   const [confirming, setConfirming] = useState(false);
   const [password, setPassword] = useState('');
@@ -226,7 +230,7 @@ function DeleteAccount({ onDeleted, onSessionEnded }: { onDeleted: () => void; o
     e.preventDefault();
     setFormError(null);
     if (!password) {
-      setError('Enter your password to delete your account.');
+      setError(t('account.deletePasswordRequired'));
       return;
     }
     setDeleting(true);
@@ -239,23 +243,23 @@ function DeleteAccount({ onDeleted, onSessionEnded }: { onDeleted: () => void; o
         endSession();
         onSessionEnded();
       } else if (isWrongPassword(err)) {
-        setError(err.message);
+        setError(t('errors.wrongPassword'));
         document.getElementById('account-delete-password')?.focus();
       } else {
-        setFormError(describeAccountError(err, 'Couldn’t delete your account. Try again.'));
+        setFormError(describeAccountError(err, t('account.deleteFailed')));
       }
     }
   }
 
   return (
     <section className="account-section account-danger" aria-labelledby="account-delete-title">
-      <h3 id="account-delete-title">Delete account</h3>
-      <p>Removes your account with its saved titles and collections. This can’t be undone.</p>
+      <h3 id="account-delete-title">{t('account.deleteTitle')}</h3>
+      <p>{t('account.deleteBody')}</p>
       {confirming ? (
         <form onSubmit={handleSubmit} className="auth-form" aria-busy={deleting} noValidate>
           <PasswordField
             id="account-delete-password"
-            label="Enter your password to confirm"
+            label={t('account.deletePasswordLabel')}
             value={password}
             onChange={(value) => {
               setPassword(value);
@@ -273,16 +277,16 @@ function DeleteAccount({ onDeleted, onSessionEnded }: { onDeleted: () => void; o
           )}
           <div className="account-actions">
             <button type="submit" className="btn btn-danger" disabled={deleting}>
-              {deleting ? 'Deleting…' : 'Delete my account'}
+              {deleting ? t('account.deleting') : t('account.deleteConfirm')}
             </button>
             <button type="button" className="btn btn-ghost" onClick={cancel} disabled={deleting}>
-              Cancel
+              {t('common.cancel')}
             </button>
           </div>
         </form>
       ) : (
         <button ref={startRef} type="button" className="btn btn-danger-outline" onClick={() => setConfirming(true)}>
-          Delete account…
+          {t('account.deleteStart')}
         </button>
       )}
     </section>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
 import type { ContentType, MediaSummary } from '../types';
 import { MAX_COLLECTION_NAME, newCollectionProblem, type SavedCollection } from '../utils/collections';
@@ -43,6 +44,7 @@ export function SavedPage({
   deleteCollection,
   toggleCollection,
 }: SavedPageProps) {
+  const { t } = useTranslation();
   // Counts are only shown once the lists have loaded; "0" while loading or failed would be false.
   const ready = status === 'ready';
   const [activeCollection, setActiveCollection] = useState('all');
@@ -81,26 +83,26 @@ export function SavedPage({
     <section className="saved-page">
       <div className="saved-heading">
         <p className="eyebrow">
-          Your library
+          {t('saved.library')}
           {ready && (
             <>
-              {' '}<span aria-hidden="true">·</span> {items.length} {items.length === 1 ? 'title' : 'titles'}
+              {' '}<span aria-hidden="true">·</span> {t('shelf.titles', { count: items.length })}
             </>
           )}
         </p>
-        <h1>Saved</h1>
+        <h1>{t('common.saved')}</h1>
       </div>
 
       <div className="saved-layout">
-        <aside className="collection-sidebar" aria-label="Saved collections">
-          <div className="collection-list" role="group" aria-label="Show collection">
+        <aside className="collection-sidebar" aria-label={t('saved.collectionsLabel')}>
+          <div className="collection-list" role="group" aria-label={t('saved.showCollection')}>
             <button
               type="button"
               className={`collection-link${activeCollection === 'all' ? ' active' : ''}`}
               aria-pressed={activeCollection === 'all'}
               onClick={() => setActiveCollection('all')}
             >
-              <span>Favorites</span>
+              <span>{t('saved.favorites')}</span>
               {ready && <span className="collection-count">{favoriteItems.length}</span>}
             </button>
             {collections.map((collection) => (
@@ -124,8 +126,8 @@ export function SavedPage({
 
         <div className="saved-results">
           <div className="saved-results-heading">
-            <h2>{selectedCollection?.name ?? 'Favorites'}</h2>
-            {ready && <span>{visibleItems.length} {visibleItems.length === 1 ? 'title' : 'titles'}</span>}
+            <h2>{selectedCollection?.name ?? t('saved.favorites')}</h2>
+            {ready && <span>{t('shelf.titles', { count: visibleItems.length })}</span>}
             {selectedCollection && !selectedCollection.builtIn && (
               <DeleteCollection
                 key={selectedCollection.id}
@@ -139,33 +141,33 @@ export function SavedPage({
             )}
           </div>
           {status === 'loading' ? (
-            <Spinner label="Loading your saved titles…" />
+            <Spinner label={t('saved.loading')} />
           ) : status === 'error' ? (
             // Never an empty state here: the list may well have titles we couldn't fetch.
             <div className="notice notice-error">
               <p role="alert">
                 <StatusIcon tone="error" />
-                Couldn’t load your saved titles. They’re safe on your account.
+                {t('saved.loadFailed')}
               </p>
               <button type="button" className="btn btn-ghost" onClick={onRetry}>
-                Try again
+                {t('common.tryAgain')}
               </button>
             </div>
           ) : visibleItems.length === 0 ? (
             <div className="empty-state saved-empty">
               <p>
                 {items.length === 0
-                  ? 'Your saved titles will appear here. Use the heart on any title to add it to Favorites.'
+                  ? t('saved.emptyNone')
                   : activeCollection === 'all'
-                    ? 'No favorites yet. Add titles to a collection from their detail view or the collection menu on a saved card.'
-                    : 'Nothing in this collection yet. Add titles from their detail view or a saved card.'}
+                    ? t('saved.emptyFavorites')
+                    : t('saved.emptyCollection')}
               </p>
               {!signedIn && items.length === 0 && (
                 <>
-                  <p>As a guest, what you save stays in this browser. Sign in to keep it on your account across devices.</p>
+                  <p>{t('saved.guestNote')}</p>
                   <div className="empty-actions">
                     <button type="button" className="btn btn-ghost" onClick={onSignIn}>
-                      Sign in
+                      {t('common.signIn')}
                     </button>
                   </div>
                 </>
@@ -191,10 +193,10 @@ export function SavedPage({
         </div>
 
         <form className="new-collection" onSubmit={createCollection} aria-labelledby="new-collection-title">
-          <h3 id="new-collection-title">New collection</h3>
-          <p className="new-collection-intro">Group titles your way — a mood, a trip, a club pick.</p>
+          <h3 id="new-collection-title">{t('collections.newCollection')}</h3>
+          <p className="new-collection-intro">{t('saved.newIntro')}</p>
           <label className="field-label" htmlFor="new-collection-name">
-            Name
+            {t('common.name')}
           </label>
           <input
             id="new-collection-name"
@@ -203,14 +205,14 @@ export function SavedPage({
               setNewCollectionName(event.target.value);
               setCreatedName(null);
             }}
-            placeholder="e.g. Rainy Sundays"
+            placeholder={t('collections.namePlaceholder')}
             maxLength={MAX_COLLECTION_NAME}
             disabled={!ready}
             aria-invalid={problem?.field === 'name'}
             aria-describedby="new-collection-status"
           />
           <fieldset className="toggle-group" disabled={!ready}>
-            <legend>For</legend>
+            <legend>{t('collections.formats')}</legend>
             <FormatChips selected={selectedTypes} onChange={setSelectedTypes} />
           </fieldset>
           <p
@@ -220,15 +222,17 @@ export function SavedPage({
           >
             {formTone && <StatusIcon tone={formTone} />}
             {!ready
-              ? 'Collections are unavailable until your library loads.'
-              : formProblem ?? (createdName ? `Created “${createdName}”.` : `Up to ${MAX_COLLECTION_NAME} characters.`)}
+              ? t('saved.unavailable')
+              : formProblem ?? (createdName
+                ? t('collections.created', { name: createdName })
+                : t('collections.nameHint', { max: MAX_COLLECTION_NAME }))}
           </p>
           <button
             type="submit"
             className="btn btn-primary"
             disabled={!ready || !newCollectionName.trim() || Boolean(formProblem)}
           >
-            Create collection
+            {t('saved.create')}
           </button>
         </form>
       </div>

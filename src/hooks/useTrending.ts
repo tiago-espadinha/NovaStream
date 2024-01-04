@@ -9,8 +9,8 @@ interface TrendingState {
   problem: LiveProblem | null;
 }
 
-/** Live trending feed for Home. Loads once per visit (the server caches it) and can be retried. */
-export function useTrending(enabled: boolean) {
+/** Live trending feed for Home. Loads once per visit and language (the server caches it) and can be retried. */
+export function useTrending(enabled: boolean, language?: string) {
   const [state, setState] = useState<TrendingState>({ items: [], loading: enabled, problem: null });
   const [attempt, setAttempt] = useState(0);
 
@@ -34,7 +34,7 @@ export function useTrending(enabled: boolean) {
     return () => {
       cancelled = true;
     };
-  }, [enabled, attempt]);
+  }, [enabled, attempt, language]);
 
   return { ...state, retry: () => setAttempt((n) => n + 1) };
 }

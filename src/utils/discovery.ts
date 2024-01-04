@@ -1,19 +1,12 @@
+import i18n from '../i18n';
 import type { ContentType, MediaSummary } from '../types';
 import { CONTENT_TYPE_LABELS, MUSIC_KIND_LABELS } from '../types';
 
 const TYPE_ORDER = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 
-const SINGULAR_TYPE_LABELS: Record<ContentType, string> = {
-  movie: 'Movie',
-  tv: 'Series',
-  music: 'Music',
-  book: 'Book',
-  game: 'Game',
-};
-
 export function mediaTypeLabel(item: Pick<MediaSummary, 'type' | 'musicKind'>): string {
-  if (item.musicKind) return `Music · ${MUSIC_KIND_LABELS[item.musicKind]}`;
-  return SINGULAR_TYPE_LABELS[item.type];
+  if (item.musicKind) return i18n.t('mediaTypes.musicWithKind', { kind: MUSIC_KIND_LABELS[item.musicKind] });
+  return i18n.t(`mediaTypes.singular.${item.type}`);
 }
 
 function outranks(candidate: MediaSummary, best: MediaSummary): boolean {
