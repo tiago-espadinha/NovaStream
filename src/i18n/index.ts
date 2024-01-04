@@ -3,11 +3,12 @@ import { initReactI18next } from 'react-i18next';
 import { detectLocale, readStoredLocale, storeLocale } from './detect';
 import { en } from './locales/en';
 import { es } from './locales/es';
+import { fr } from './locales/fr';
 import { ptPT } from './locales/pt-PT';
 import type { Locale } from './locales';
 import type { Messages } from './types';
 
-export const catalogs: Partial<Record<Locale, Messages>> = { en, 'pt-PT': ptPT, es };
+export const catalogs: Partial<Record<Locale, Messages>> = { en, 'pt-PT': ptPT, es, fr };
 export const availableLocales = Object.keys(catalogs) as Locale[];
 
 function syncDocumentLanguage(language: string) {
