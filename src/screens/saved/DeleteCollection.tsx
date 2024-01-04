@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDialog } from '../../hooks/useDialog';
 import './DeleteCollection.css';
 
@@ -9,6 +10,7 @@ interface DeleteCollectionProps {
 
 /** Bin button for the selected collection; asks in a modal first because deletion can't be undone. */
 export function DeleteCollection({ name, onDelete }: DeleteCollectionProps) {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
 
   return (
@@ -16,9 +18,9 @@ export function DeleteCollection({ name, onDelete }: DeleteCollectionProps) {
       <button
         type="button"
         className="icon-button collection-bin"
-        aria-label={`Delete collection ${name}`}
+        aria-label={t('collections.delete.ariaLabel', { name })}
         aria-haspopup="dialog"
-        title={`Delete ${name}`}
+        title={t('collections.delete.title', { name })}
         onClick={() => setConfirming(true)}
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -37,6 +39,7 @@ interface ConfirmDeleteProps {
 }
 
 function ConfirmDelete({ name, onDelete, onClose }: ConfirmDeleteProps) {
+  const { t } = useTranslation();
   const panelRef = useDialog<HTMLDivElement>(onClose);
 
   return (
@@ -52,18 +55,16 @@ function ConfirmDelete({ name, onDelete, onClose }: ConfirmDeleteProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="confirm-delete-body">
-          <h2 id="confirm-delete-title">Delete “{name}”?</h2>
-          <p id="confirm-delete-message">
-            The collection is removed for good. The titles in it stay in your Favorites.
-          </p>
+          <h2 id="confirm-delete-title">{t('collections.delete.heading', { name })}</h2>
+          <p id="confirm-delete-message">{t('collections.delete.message')}</p>
         </div>
         <div className="dialog-actions">
           <button type="button" className="btn btn-danger" onClick={onDelete}>
-            Delete
+            {t('collections.delete.confirm')}
           </button>
           {/* Cancel takes initial focus so Enter can't delete by accident. */}
           <button type="button" className="btn btn-ghost" data-autofocus onClick={onClose}>
-            Cancel
+            {t('common.cancel')}
           </button>
         </div>
       </div>

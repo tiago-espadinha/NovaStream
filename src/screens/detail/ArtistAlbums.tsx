@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import * as api from '../../services/apiService';
 import { ApiError } from '../../services/apiService';
 import type { MediaSummary } from '../../types';
@@ -20,6 +21,7 @@ interface ArtistAlbumsProps {
 
 /** The artist's most played albums; loads after the rest of the detail so it never holds it up. */
 export function ArtistAlbums({ externalId, isFavorite, onToggleFavorite, onSelect, initialAlbums }: ArtistAlbumsProps) {
+  const { t } = useTranslation();
   const [albums, setAlbums] = useState<MediaSummary[] | null>(initialAlbums ?? null);
   const [error, setError] = useState<LiveProblem | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -55,7 +57,7 @@ export function ArtistAlbums({ externalId, isFavorite, onToggleFavorite, onSelec
     <div className="detail-albums">
       <Shelf
         id="artist-albums"
-        title="Albums"
+        title={t('albums.title')}
         items={albums ?? []}
         isFavorite={isFavorite}
         onToggleFavorite={onToggleFavorite}
@@ -66,14 +68,14 @@ export function ArtistAlbums({ externalId, isFavorite, onToggleFavorite, onSelec
               <p role="status">{error.message}</p>
               {error.retryable && (
                 <button type="button" className="btn btn-ghost" onClick={retry}>
-                  Try again
+                  {t('common.tryAgain')}
                 </button>
               )}
             </div>
           ) : !albums ? (
-            <Spinner label="Loading albums…" />
+            <Spinner label={t('albums.loading')} />
           ) : (
-            albums.length === 0 && <p className="detail-albums-empty">No albums found.</p>
+            albums.length === 0 && <p className="detail-albums-empty">{t('albums.empty')}</p>
           )
         }
       />

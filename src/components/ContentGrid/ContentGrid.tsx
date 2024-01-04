@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { MediaSummary } from '../../types';
 import { ContentCard } from '../ContentCard/ContentCard';
 import './ContentGrid.css';
@@ -10,8 +11,9 @@ interface ContentGridProps {
 }
 
 export function ContentGrid({ items, isFavorite, onToggleFavorite, onSelect }: ContentGridProps) {
+  const { t } = useTranslation();
   if (items.length === 0) {
-    return <div className="empty-state">No matches. Try a different search or category.</div>;
+    return <div className="empty-state">{t('cards.empty')}</div>;
   }
 
   return (

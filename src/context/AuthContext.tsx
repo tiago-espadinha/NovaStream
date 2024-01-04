@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as api from '../services/apiService';
+import i18n from '../i18n';
 import type { AuthUser } from '../types';
 import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
 
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const endSession = useCallback(
-    (message = 'Your session expired. Sign in again to see your saved titles.') => {
+    (message = i18n.t('account.sessionExpired')) => {
       clearSession();
       setSessionNotice(message);
     },
@@ -137,13 +138,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const login = useCallback(
-    (email: string, password: string) => authenticate(() => api.login(email, password), 'Sign-in failed. Try again.'),
+    (email: string, password: string) => authenticate(() => api.login(email, password), i18n.t('account.signInFailed')),
     [authenticate],
   );
 
   const register = useCallback(
     (email: string, password: string, name?: string) =>
-      authenticate(() => api.register(email, password, name), 'Couldn’t create your account. Try again.'),
+      authenticate(() => api.register(email, password, name), i18n.t('account.createFailed')),
     [authenticate],
   );
 

@@ -10,10 +10,22 @@
   .site-footer p {
     margin: 0;
   }
-  .site-footer strong {
-    color: var(--color-text);
+  .footer-developer-name {
+    display: inline-block;
+    margin-inline: calc(-1 * var(--space-2));
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-pill);
+    color: var(--color-secondary);
     font-weight: 600;
     white-space: nowrap;
+    text-decoration: none;
+    transition:
+      color var(--transition-fast),
+      background-color var(--transition-fast);
+  }
+  .footer-developer-name:hover {
+    background: var(--color-surface-glass);
+    color: var(--color-primary);
   }
   .footer-developer {
     font-size: var(--font-size-control);
@@ -21,7 +33,7 @@
     flex-wrap: wrap;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2) var(--space-4);
+    gap: var(--space-2);
   }
   .footer-social {
     display: flex;
