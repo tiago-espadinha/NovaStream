@@ -2,10 +2,11 @@ import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import { detectLocale, readStoredLocale, storeLocale } from './detect';
 import { en } from './locales/en';
+import { ptPT } from './locales/pt-PT';
 import type { Locale } from './locales';
 import type { Messages } from './types';
 
-export const catalogs: Partial<Record<Locale, Messages>> = { en };
+export const catalogs: Partial<Record<Locale, Messages>> = { en, 'pt-PT': ptPT };
 export const availableLocales = Object.keys(catalogs) as Locale[];
 
 function syncDocumentLanguage(language: string) {
