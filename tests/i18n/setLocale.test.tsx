@@ -12,7 +12,6 @@ function Probe() {
 describe('setLocale', () => {
   afterEach(async () => {
     await i18n.changeLanguage('en');
-    i18n.removeResourceBundle('fr', 'translation');
     vi.unstubAllGlobals();
   });
 
@@ -23,7 +22,6 @@ describe('setLocale', () => {
       setItem: (key: string, value: string) => store.set(key, value),
     });
     vi.stubGlobal('document', { documentElement: { lang: 'en' } });
-    i18n.addResourceBundle('fr', 'translation', { header: { language: 'Langue' } });
 
     expect(renderToStaticMarkup(<Probe />)).toBe('<p>Language</p>');
     await setLocale('fr');
