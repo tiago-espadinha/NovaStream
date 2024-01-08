@@ -1,5 +1,4 @@
 @layer screens {
-  /* detail loading / error */
   .detail-status {
     width: min(440px, 100%);
   }

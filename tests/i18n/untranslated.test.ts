@@ -74,7 +74,7 @@ declare global {
 }
 
 // Every component's source, read through Vite so the test needs no Node file APIs.
-const components = import.meta.glob<string>(['../../src/**/*.tsx', '!../../src/**/*.test.tsx'], {
+const components = import.meta.glob<string>(['../../src/**/*.tsx'], {
   query: '?raw',
   import: 'default',
   eager: true,

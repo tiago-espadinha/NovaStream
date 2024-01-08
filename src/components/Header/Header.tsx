@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { SessionStatus } from '../../context/AuthContext';
+import type { SessionStatus } from '../../context/useAuth';
 import { isDialogOpen } from '../../hooks/useDialog';
 import type { AuthUser, ContentType } from '../../types';
 import { parseContentQuery } from '../../utils/contentFilters';

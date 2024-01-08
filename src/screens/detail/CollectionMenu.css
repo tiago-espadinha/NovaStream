@@ -1,4 +1,28 @@
 @layer screens {
+  .popover-create input:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+  .popover-create input:not([type='checkbox']) {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--color-border-strong);
+    border-radius: var(--radius-control);
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+  .popover-create input::placeholder {
+    color: var(--color-text-muted);
+  }
+  .popover-create input:focus-visible {
+    outline-offset: 0;
+    border-color: var(--color-focus);
+  }
+  .popover-create input[aria-invalid='true'] {
+    border-color: var(--color-danger);
+  }
   .collection-menu {
     position: relative;
   }
@@ -12,6 +36,10 @@
   }
   .collection-trigger.active {
     border-color: var(--color-secondary);
+  }
+  /* This layer outranks .btn-ghost, so its hover has to be restated. */
+  .collection-trigger.active:hover:not(:disabled) {
+    border-color: var(--color-text);
   }
   .count-badge {
     display: grid;
@@ -65,7 +93,6 @@
       white-space: nowrap;
     }
   }
-  /* new collection, inline in the collections popover */
   .popover-created {
     margin: 0;
     font-size: var(--font-size-small);

@@ -3,14 +3,14 @@ import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
 import type { ContentType } from '../../types';
-import { CONTENT_TYPE_LABELS } from '../../types';
+import { CONTENT_TYPE_LABELS, CONTENT_TYPES } from '../../types';
 import {
   MAX_COLLECTION_NAME,
   MAX_CUSTOM_COLLECTIONS,
   newCollectionProblem,
   type SavedCollection,
 } from '../../utils/collections';
-import { CONTENT_TYPES, FormatChips } from '../../components/FormatChips/FormatChips';
+import { FormatChips } from '../../components/FormatChips/FormatChips';
 import { StatusIcon } from '../../components/StatusIcon/StatusIcon';
 
 interface NewCollectionFormProps {

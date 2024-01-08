@@ -1,7 +1,7 @@
 import type { Messages } from '../types';
 
-// French, addressing the reader as vous. Guillemets take a no-break space inside ( ), and
-// ? and : take a narrow one before ( ), so neither wraps away from its word.
+// French, addressing the reader as vous. Guillemets take a no-break space inside (U+00A0), and
+// ? and : take a narrow one before (U+202F), so neither wraps away from its word.
 // `_many` forms cover counts like 1 000 000, which take "de" before the noun.
 export const fr: Messages = {
   errors: {
@@ -11,6 +11,10 @@ export const fr: Messages = {
     rateLimited_one: 'Trop de tentatives de mot de passe. Réessayez dans {{count}} minute.',
     rateLimited_many: 'Trop de tentatives de mot de passe. Réessayez dans {{count}} de minutes.',
     rateLimited_other: 'Trop de tentatives de mot de passe. Réessayez dans {{count}} minutes.',
+    signUpLimited_one: 'Trop de tentatives d’inscription. Réessayez dans {{count}} minute.',
+    signUpLimited_many: 'Trop de tentatives d’inscription. Réessayez dans {{count}} de minutes.',
+    signUpLimited_other: 'Trop de tentatives d’inscription. Réessayez dans {{count}} minutes.',
+    emailTaken: 'Un compte existe déjà avec cette adresse e-mail.',
   },
   common: {
     all: 'Tout',
@@ -164,6 +168,7 @@ export const fr: Messages = {
     passwordHint: 'Au moins {{min}} caractères',
     wait: 'Patientez…',
     createAccount: 'Créer un compte',
+    signInInstead: 'Se connecter',
     noAccount: 'Pas encore de compte ? Inscrivez-vous',
     haveAccount: 'Déjà un compte ? Connectez-vous',
   },

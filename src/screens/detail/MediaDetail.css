@@ -1,5 +1,4 @@
 @layer screens {
-  /* media detail overlay */
   .detail-backdrop {
     align-items: flex-start;
     overflow-y: auto;
@@ -32,6 +31,10 @@
     background: var(--color-surface);
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+  /* This layer outranks .btn-ghost, so its hover has to be restated. */
+  .detail-back:hover:not(:disabled) {
+    background: var(--color-surface-glass);
   }
   @media (min-width: 768px) {
     .detail-back ~ .detail-hero {
@@ -195,8 +198,6 @@
        past its background. min-height below still fills the screen. */
       align-items: flex-start;
     }
-  }
-  @media (max-width: 767px) {
     .detail-panel {
       min-height: 100dvh;
       margin: 0;
@@ -221,8 +222,6 @@
     .detail-save {
       flex: 1 1 auto;
     }
-  }
-  @media (max-width: 767px) {
     .detail-body {
       padding: var(--space-5) var(--space-4) calc(var(--space-8) + env(safe-area-inset-bottom, 0px));
     }

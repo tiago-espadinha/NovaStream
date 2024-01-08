@@ -17,6 +17,7 @@ export function useTrending(enabled: boolean, language?: string) {
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    // oxlint-disable-next-line react/set-state-in-effect -- Starting a request: its loading state belongs here.
     setState((current) => ({ ...current, loading: true, problem: null }));
     api
       .getTrending()

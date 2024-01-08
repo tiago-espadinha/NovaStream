@@ -1,40 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as api from '../services/apiService';
 import i18n from '../i18n';
 import type { AuthUser } from '../types';
-import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
+import { describeAccountError, isSessionEnded, type AttemptLimit } from '../utils/accountErrors';
+import { AuthContext, type SessionStatus } from './useAuth';
 
 const TOKEN_KEY = 'nova-stream:token';
-
-/**
- * - checking: a stored token is being confirmed with the server
- * - unreachable: a token is stored but the server couldn't confirm it; it's kept, not dropped
- */
-export type SessionStatus = 'signedOut' | 'checking' | 'signedIn' | 'unreachable';
-
-interface AuthContextValue {
-  user: AuthUser | null;
-  token: string | null;
-  status: SessionStatus;
-  loading: boolean;
-  error: string | null;
-  /** Why the user was signed out without asking, e.g. an expired session. */
-  sessionNotice: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name?: string) => Promise<void>;
-  logout: () => void;
-  /** Rejects with the API error; on success this device stays signed in and others are signed out. */
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  /** Rejects with the API error; on success the session ends. */
-  deleteAccount: (password: string) => Promise<void>;
-  refreshUser: () => Promise<void>;
-  /** Call when an account request answers 401: signs out and explains why (optionally, what didn't happen). */
-  endSession: (message?: string) => void;
-  clearSessionNotice: () => void;
-}
-
-const AuthContext = createContext<AuthContextValue | null>(null);
 
 function readToken(): string | null {
   try {
@@ -86,7 +58,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // The token in effect right now, so a slow check can tell it has been superseded.
   const tokenRef = useRef(token);
-  tokenRef.current = token;
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
 
   const refreshUser = useCallback(async () => {
     if (!token) return;
@@ -105,6 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token, endSession]);
 
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- Starting a request: its loading state belongs here.
     if (token && !user) refreshUser();
   }, [token, user, refreshUser]);
 
@@ -121,14 +96,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const authenticate = useCallback(
-    async (request: () => Promise<api.AuthResponse>, fallback: string) => {
+    async (request: () => Promise<api.AuthResponse>, fallback: string, limit?: AttemptLimit) => {
       setLoading(true);
       setError(null);
       try {
         const res = await request();
         startSession(res.token, res.user);
       } catch (err) {
-        setError(describeAccountError(err, fallback));
+        setError(describeAccountError(err, fallback, limit));
         throw err;
       } finally {
         setLoading(false);
@@ -144,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     (email: string, password: string, name?: string) =>
-      authenticate(() => api.register(email, password, name), i18n.t('account.createFailed')),
+      authenticate(() => api.register(email, password, name), i18n.t('account.createFailed'), 'signUp'),
     [authenticate],
   );
 
@@ -167,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const clearSessionNotice = useCallback(() => setSessionNotice(null), []);
+  const clearError = useCallback(() => setError(null), []);
 
   const value = useMemo(
     () => ({
@@ -184,6 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       endSession,
       clearSessionNotice,
+      clearError,
     }),
     [
       user,
@@ -200,14 +177,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       endSession,
       clearSessionNotice,
+      clearError,
     ],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used within an AuthProvider');
-  return ctx;
 }

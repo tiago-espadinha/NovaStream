@@ -31,19 +31,17 @@ export function ArtistAlbums({ externalId, isFavorite, onToggleFavorite, onSelec
 
   useEffect(() => {
     if (reusedAlbums.current) return;
-    let active = true;
+    const request = new AbortController();
     api
       .getArtistAlbums(externalId)
-      .then((result) => active && setAlbums(result.albums))
+      .then((result) => !request.signal.aborted && setAlbums(result.albums))
       .catch((err) => {
-        if (!active) return;
+        if (request.signal.aborted) return;
         // Last.fm answers "not found" for an artist it lists no albums under.
         if (err instanceof ApiError && err.code === 'not_found') setAlbums([]);
         else setError(describeAlbumsError(err));
       });
-    return () => {
-      active = false;
-    };
+    return () => request.abort();
   }, [externalId, attempt]);
 
   const retry = () => {

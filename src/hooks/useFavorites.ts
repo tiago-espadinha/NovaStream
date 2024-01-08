@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../services/apiService';
 import { ApiError } from '../services/apiService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import type { MediaSummary } from '../types';
 import i18n from '../i18n';
 import { describeAccountError, describeGuestMerge, isSessionEnded } from '../utils/accountErrors';
 
 const LOCAL_FAVORITES_KEY = 'nova-stream:favorites';
+// One empty list, so memos on the saved media don't rerun while an account loads.
+const NO_MEDIA: MediaSummary[] = [];
 
 export type SavedListStatus = 'loading' | 'ready' | 'error';
 
@@ -65,12 +67,17 @@ export function useFavorites() {
   }, [localSavedMedia]);
 
   // A notice is about the account it happened in; it doesn't survive signing in or out.
-  useEffect(() => setNotice(null), [token]);
+  const [noticeToken, setNoticeToken] = useState(token);
+  if (token !== noticeToken) {
+    setNoticeToken(token);
+    setNotice(null);
+  }
 
   // Authenticated favorites belong to the account; guests never hit the network.
   useEffect(() => {
     if (!token) return;
-    let active = true;
+    const request = new AbortController();
+    // oxlint-disable-next-line react/set-state-in-effect -- Starting a request: its loading state belongs here.
     setAccount((current) => ({
       token,
       media: current.token === token ? current.media : [],
@@ -79,19 +86,22 @@ export function useFavorites() {
     api
       .getSavedMedia(token)
       .then((res) => {
-        if (active) setAccount({ token, media: res.savedMedia, status: 'ready' });
+        if (!request.signal.aborted) setAccount({ token, media: res.savedMedia, status: 'ready' });
       })
       .catch((err) => {
-        if (!active) return;
+        if (request.signal.aborted) return;
         setAccount((current) => ({ ...current, status: 'error' }));
         if (isSessionEnded(err)) endSession();
       });
-    return () => {
-      active = false;
-    };
+    return () => request.abort();
   }, [token, loadAttempt, endSession]);
 
   const accountReady = Boolean(token) && account.token === token && account.status === 'ready';
+  // Read by the merge below, which must not rerun each time the list changes.
+  const accountMedia = useRef(account.media);
+  useEffect(() => {
+    accountMedia.current = account.media;
+  }, [account.media]);
 
   // Move guest favorites into the account once it has loaded. Items that fail stay local,
   // so the next load tries them again. The guest list is read from storage, not this tab's
@@ -100,19 +110,19 @@ export function useFavorites() {
     if (!token || !accountReady) return;
     const guest = readLocalFavorites();
     if (guest.length === 0) return;
-    let active = true;
+    const merge = new AbortController();
     const run = {};
     mergeRun.current = run;
-    const accountIds = new Set(account.media.map((media) => media.id));
+    const accountIds = new Set(accountMedia.current.map((media) => media.id));
     const toUpload = guest.filter((media) => !accountIds.has(media.id));
     (async () => {
       const moved = new Set(guest.filter((media) => accountIds.has(media.id)).map((media) => media.id));
-      let latest = account.media;
+      let latest = accountMedia.current;
       let notAdded = 0;
       let limitMessage: string | null = null;
       try {
         for (const [index, media] of toUpload.entries()) {
-          if (!active) return;
+          if (merge.signal.aborted) return;
           try {
             latest = (await api.saveMedia(token, media)).savedMedia;
             moved.add(media.id);
@@ -127,7 +137,7 @@ export function useFavorites() {
             notAdded += 1;
           }
         }
-        if (!active) return;
+        if (merge.signal.aborted) return;
         setAccount({ token, media: latest, status: 'ready' });
         setLocalSavedMedia(readLocalFavorites().filter((media) => !moved.has(media.id)));
         const notice = limitMessage
@@ -138,13 +148,11 @@ export function useFavorites() {
         if (mergeRun.current === run) mergeRun.current = null;
       }
     })();
-    return () => {
-      active = false;
-    };
-    // Deliberately runs only when the account becomes ready (after sign-in or a retried load).
-  }, [token, accountReady]);
+    return () => merge.abort();
+    // Runs only when the account becomes ready (after sign-in or a retried load); endSession is stable.
+  }, [token, accountReady, endSession]);
 
-  const savedMedia = token ? (account.token === token ? account.media : []) : localSavedMedia;
+  const savedMedia = token ? (account.token === token ? account.media : NO_MEDIA) : localSavedMedia;
   const status: SavedListStatus = token ? (account.token === token ? account.status : 'loading') : 'ready';
 
   const favoriteIds = useMemo(() => new Set(savedMedia.map((media) => media.id)), [savedMedia]);

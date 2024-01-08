@@ -1,5 +1,4 @@
 @layer screens {
-  /* live mode introduction */
   .intro {
     margin-bottom: var(--space-10);
     padding: var(--space-10) 0 var(--space-8);

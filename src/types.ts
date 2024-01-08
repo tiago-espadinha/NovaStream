@@ -99,6 +99,8 @@ export const CONTENT_TYPE_LABELS: Record<ContentType, string> = localizedLabels(
   (type) => i18n.t(`mediaTypes.plural.${type}`),
 );
 
+export const CONTENT_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
+
 export interface UserPreferences {
   favoriteGenres: string[];
   theme?: string;
