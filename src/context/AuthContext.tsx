@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 import * as api from '../services/apiService';
 import i18n from '../i18n';
 import type { AuthUser } from '../types';
-import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
+import { describeAccountError, isSessionEnded, type AttemptLimit } from '../utils/accountErrors';
 
 const TOKEN_KEY = 'nova-stream:token';
 
@@ -32,6 +32,8 @@ interface AuthContextValue {
   /** Call when an account request answers 401: signs out and explains why (optionally, what didn't happen). */
   endSession: (message?: string) => void;
   clearSessionNotice: () => void;
+  /** Drops the last sign-in or sign-up error, e.g. when the form switches mode. */
+  clearError: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -121,14 +123,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const authenticate = useCallback(
-    async (request: () => Promise<api.AuthResponse>, fallback: string) => {
+    async (request: () => Promise<api.AuthResponse>, fallback: string, limit?: AttemptLimit) => {
       setLoading(true);
       setError(null);
       try {
         const res = await request();
         startSession(res.token, res.user);
       } catch (err) {
-        setError(describeAccountError(err, fallback));
+        setError(describeAccountError(err, fallback, limit));
         throw err;
       } finally {
         setLoading(false);
@@ -144,7 +146,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = useCallback(
     (email: string, password: string, name?: string) =>
-      authenticate(() => api.register(email, password, name), i18n.t('account.createFailed')),
+      authenticate(() => api.register(email, password, name), i18n.t('account.createFailed'), 'signUp'),
     [authenticate],
   );
 
@@ -167,6 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const clearSessionNotice = useCallback(() => setSessionNotice(null), []);
+  const clearError = useCallback(() => setError(null), []);
 
   const value = useMemo(
     () => ({
@@ -184,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       endSession,
       clearSessionNotice,
+      clearError,
     }),
     [
       user,
@@ -200,6 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshUser,
       endSession,
       clearSessionNotice,
+      clearError,
     ],
   );
 

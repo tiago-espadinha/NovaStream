@@ -6,6 +6,9 @@ export const en = {
     wrongPassword: 'That password isn’t right.',
     rateLimited_one: 'Too many password attempts. Try again in {{count}} minute.',
     rateLimited_other: 'Too many password attempts. Try again in {{count}} minutes.',
+    signUpLimited_one: 'Too many sign-up attempts. Try again in {{count}} minute.',
+    signUpLimited_other: 'Too many sign-up attempts. Try again in {{count}} minutes.',
+    emailTaken: 'An account with that email already exists.',
   },
   common: {
     all: 'All',
@@ -156,6 +159,7 @@ export const en = {
     createAccount: 'Create account',
     noAccount: "Don't have an account? Sign up",
     haveAccount: 'Already have an account? Sign in',
+    signInInstead: 'Sign in instead',
   },
   favorites: {
     merging: 'Still adding favorites from this browser to your account. Try again in a moment.',

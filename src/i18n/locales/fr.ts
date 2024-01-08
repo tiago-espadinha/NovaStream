@@ -11,6 +11,10 @@ export const fr: Messages = {
     rateLimited_one: 'Trop de tentatives de mot de passe. Réessayez dans {{count}} minute.',
     rateLimited_many: 'Trop de tentatives de mot de passe. Réessayez dans {{count}} de minutes.',
     rateLimited_other: 'Trop de tentatives de mot de passe. Réessayez dans {{count}} minutes.',
+    signUpLimited_one: 'Trop de tentatives d’inscription. Réessayez dans {{count}} minute.',
+    signUpLimited_many: 'Trop de tentatives d’inscription. Réessayez dans {{count}} de minutes.',
+    signUpLimited_other: 'Trop de tentatives d’inscription. Réessayez dans {{count}} minutes.',
+    emailTaken: 'Un compte existe déjà avec cette adresse e-mail.',
   },
   common: {
     all: 'Tout',
@@ -162,6 +166,7 @@ export const fr: Messages = {
     passwordHint: 'Au moins {{min}} caractères',
     wait: 'Patientez…',
     createAccount: 'Créer un compte',
+    signInInstead: 'Se connecter',
     noAccount: 'Pas encore de compte ? Inscrivez-vous',
     haveAccount: 'Déjà un compte ? Connectez-vous',
   },

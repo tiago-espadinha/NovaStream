@@ -15,20 +15,24 @@ export function describeGuestMerge(added: number, notAdded: number): { message: 
   return { message: added > 0 ? `${i18n.t('account.mergeAddedPartial', { count: added })} ${kept}` : kept, error: true };
 }
 
+/** What a 429 was counting: password attempts, or sign-ups. */
+export type AttemptLimit = 'password' | 'signUp';
+
 /**
  * User-facing copy for a failed account request. The server writes its 4xx messages for
- * users (validation, wrong password, duplicate email, list limits); everything else gets
- * generic copy so raw network or server text never reaches the UI.
+ * users (validation, list limits); everything else gets generic copy so raw network or
+ * server text never reaches the UI.
  */
-export function describeAccountError(error: unknown, fallback: string): string {
+export function describeAccountError(error: unknown, fallback: string, limit: AttemptLimit = 'password'): string {
   if (!(error instanceof ApiError)) return i18n.t('errors.offline');
   if (error.code === 'not_configured') return i18n.t('errors.notConfigured');
   // Coded errors are worded from the catalog; the server's English is only a fallback for other 4xx.
   if (error.code === 'rate_limited') {
     const minutes = Math.max(1, Math.ceil((error.retryAfterSeconds ?? 60) / 60));
-    return i18n.t('errors.rateLimited', { count: minutes });
+    return i18n.t(limit === 'signUp' ? 'errors.signUpLimited' : 'errors.rateLimited', { count: minutes });
   }
   if (error.code === 'wrong_password') return i18n.t('errors.wrongPassword');
+  if (error.code === 'email_taken') return i18n.t('errors.emailTaken');
   if (error.status >= 400 && error.status < 500) return error.message;
   return fallback;
 }

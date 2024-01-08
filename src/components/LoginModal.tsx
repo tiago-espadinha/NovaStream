@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 import { useAuth } from '../context/AuthContext';
+import { ApiError } from '../services/apiService';
 import { useDialog } from '../hooks/useDialog';
 import { StatusIcon } from './StatusIcon';
 import { MIN_PASSWORD, validateCredentials, type FieldErrors } from '../utils/authValidation';
@@ -12,13 +13,28 @@ interface LoginModalProps {
 
 export function LoginModal({ onClose }: LoginModalProps) {
   const { t } = useTranslation();
-  const { login, register, loading, error } = useAuth();
+  const { login, register, loading, error, clearError } = useAuth();
   const panelRef = useDialog<HTMLDivElement>(onClose);
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [emailTaken, setEmailTaken] = useState(false);
+
+  // Keeps what was typed; the last error belonged to the other form.
+  function switchMode(next: 'login' | 'register') {
+    setMode(next);
+    setEmailTaken(false);
+    clearError();
+  }
+
+  // A password made up for the new account would only cost a rate-limited sign-in attempt.
+  function signInInstead() {
+    switchMode('login');
+    setPassword('');
+    document.getElementById('auth-password')?.focus();
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -35,8 +51,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
         await register(email, password, name);
       }
       onClose();
-    } catch {
-      // error is already surfaced via useAuth().error
+    } catch (err) {
+      // The message itself is surfaced via useAuth().error; a taken email also offers to sign in.
+      setEmailTaken(err instanceof ApiError && err.code === 'email_taken');
     }
   }
 
@@ -123,6 +140,14 @@ export function LoginModal({ onClose }: LoginModalProps) {
           {error && (
             <p className="auth-error" role="alert">
               {error}
+              {emailTaken && (
+                <>
+                  {' '}
+                  <button type="button" className="auth-error-action" onClick={signInInstead}>
+                    {t('auth.signInInstead')}
+                  </button>
+                </>
+              )}
             </p>
           )}
 
@@ -134,7 +159,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         <button
           type="button"
           className="auth-switch"
-          onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+          onClick={() => switchMode(mode === 'login' ? 'register' : 'login')}
         >
           {mode === 'login' ? t('auth.noAccount') : t('auth.haveAccount')}
         </button>

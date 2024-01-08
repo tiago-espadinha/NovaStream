@@ -9,6 +9,10 @@ export const ptPT: Messages = {
     rateLimited_one: 'Demasiadas tentativas de palavra-passe. Tente novamente dentro de {{count}} minuto.',
     rateLimited_many: 'Demasiadas tentativas de palavra-passe. Tente novamente dentro de {{count}} de minutos.',
     rateLimited_other: 'Demasiadas tentativas de palavra-passe. Tente novamente dentro de {{count}} minutos.',
+    signUpLimited_one: 'Demasiadas tentativas de registo. Tente novamente dentro de {{count}} minuto.',
+    signUpLimited_many: 'Demasiadas tentativas de registo. Tente novamente dentro de {{count}} de minutos.',
+    signUpLimited_other: 'Demasiadas tentativas de registo. Tente novamente dentro de {{count}} minutos.',
+    emailTaken: 'Já existe uma conta com este email.',
   },
   common: {
     all: 'Tudo',
@@ -162,6 +166,7 @@ export const ptPT: Messages = {
     createAccount: 'Criar conta',
     noAccount: 'Não tem conta? Registe-se',
     haveAccount: 'Já tem conta? Inicie sessão',
+    signInInstead: 'Iniciar sessão',
   },
   favorites: {
     merging: 'Ainda estamos a adicionar os favoritos deste navegador à sua conta. Tente novamente daqui a pouco.',
