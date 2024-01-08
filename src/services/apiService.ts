@@ -12,7 +12,7 @@ import type {
 import type { CollectionsDoc } from '../utils/collections';
 
 export type ProviderErrorCode = 'not_configured' | 'not_found' | 'timeout' | 'unavailable';
-export type ApiErrorCode = ProviderErrorCode | 'wrong_password' | 'rate_limited';
+export type ApiErrorCode = ProviderErrorCode | 'wrong_password' | 'rate_limited' | 'email_taken';
 
 export class ApiError extends Error {
   status: number;

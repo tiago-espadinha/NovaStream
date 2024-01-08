@@ -2050,6 +2050,18 @@ main:focus {
   background: var(--color-danger-surface);
   font-size: var(--font-size-small);
 }
+/* An inline next step inside the error, e.g. "Sign in instead" for a taken email. */
+.auth-error-action {
+  min-height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-secondary);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
 .auth-switch {
   width: 100%;
   min-height: 44px;

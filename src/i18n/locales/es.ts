@@ -9,6 +9,10 @@ export const es: Messages = {
     rateLimited_one: 'Demasiados intentos de contraseña. Vuelve a intentarlo dentro de {{count}} minuto.',
     rateLimited_many: 'Demasiados intentos de contraseña. Vuelve a intentarlo dentro de {{count}} de minutos.',
     rateLimited_other: 'Demasiados intentos de contraseña. Vuelve a intentarlo dentro de {{count}} minutos.',
+    signUpLimited_one: 'Demasiados intentos de registro. Vuelve a intentarlo dentro de {{count}} minuto.',
+    signUpLimited_many: 'Demasiados intentos de registro. Vuelve a intentarlo dentro de {{count}} de minutos.',
+    signUpLimited_other: 'Demasiados intentos de registro. Vuelve a intentarlo dentro de {{count}} minutos.',
+    emailTaken: 'Ya existe una cuenta con ese correo electrónico.',
   },
   common: {
     all: 'Todo',
@@ -162,6 +166,7 @@ export const es: Messages = {
     createAccount: 'Crear cuenta',
     noAccount: '¿No tienes cuenta? Regístrate',
     haveAccount: '¿Ya tienes cuenta? Inicia sesión',
+    signInInstead: 'Iniciar sesión',
   },
   favorites: {
     merging: 'Aún estamos añadiendo los favoritos de este navegador a tu cuenta. Inténtalo de nuevo en un momento.',

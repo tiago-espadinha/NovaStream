@@ -46,6 +46,20 @@ describe('describeAccountError', () => {
     expect(limited(undefined)).toBe('Too many password attempts. Try again in 1 minute.');
   });
 
+  it('words a rate-limited sign-up as a sign-up limit, not a password one', () => {
+    const limited = new ApiError(429, 'server text', 'rate_limited', 3600);
+    expect(describeAccountError(limited, 'fallback', 'signUp')).toBe('Too many sign-up attempts. Try again in 60 minutes.');
+    expect(describeAccountError(new ApiError(429, 'x', 'rate_limited', 30), 'fallback', 'signUp')).toBe(
+      'Too many sign-up attempts. Try again in 1 minute.',
+    );
+  });
+
+  it('words a taken email from the catalog', () => {
+    expect(describeAccountError(new ApiError(409, 'server text', 'email_taken'), 'fallback', 'signUp')).toBe(
+      'An account with that email already exists.',
+    );
+  });
+
   it('words a wrong password from the catalog', () => {
     expect(describeAccountError(new ApiError(403, 'server text', 'wrong_password'), 'fallback')).toBe(
       'That password isn’t right.',
