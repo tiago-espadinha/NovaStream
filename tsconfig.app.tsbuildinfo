@@ -1,0 +1,31 @@
+{
+  "root": [
+    "./src/App.tsx",
+    "./src/config.ts",
+    "./src/main.tsx",
+    "./src/types.ts",
+    "./src/components/BackgroundFX.tsx",
+    "./src/components/ContentCard.tsx",
+    "./src/components/ContentGrid.tsx",
+    "./src/components/Header.tsx",
+    "./src/components/HeartIcon.tsx",
+    "./src/components/LoginModal.tsx",
+    "./src/components/MediaDetail.tsx",
+    "./src/components/PlayIcon.tsx",
+    "./src/components/SavedPage.tsx",
+    "./src/components/Spinner.tsx",
+    "./src/components/StarIcon.tsx",
+    "./src/components/TypeNav.tsx",
+    "./src/components/WatchlistStrip.tsx",
+    "./src/context/AuthContext.tsx",
+    "./src/data/mockData.ts",
+    "./src/hooks/useCollections.ts",
+    "./src/hooks/useFavorites.ts",
+    "./src/services/apiService.ts",
+    "./src/utils/contentFilters.test.ts",
+    "./src/utils/contentFilters.ts",
+    "./src/utils/gradient.ts",
+    "./src/utils/playcount.ts"
+  ],
+  "version": "5.9.3"
+}
