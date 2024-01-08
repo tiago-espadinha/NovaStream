@@ -11,7 +11,7 @@ import { signUpAttempts } from '../utils/signUpAttempts.js';
 export const authRouter = Router();
 
 function toPublicUser(user) {
-  const { passwordHash, sessionVersion, ...rest } = user;
+  const { passwordHash: _passwordHash, sessionVersion: _sessionVersion, ...rest } = user;
   return rest;
 }
 

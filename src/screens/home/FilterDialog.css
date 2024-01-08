@@ -46,4 +46,9 @@
     color: var(--color-text);
     font-weight: 700;
   }
+  @media (max-width: 767px) {
+    .filter-body {
+      padding-inline: var(--space-4);
+    }
+  }
 }

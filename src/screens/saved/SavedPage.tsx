@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { FormEvent } from 'react';
-import type { ContentType, MediaSummary } from '../../types';
+import { CONTENT_TYPES, type ContentType, type MediaSummary } from '../../types';
 import { MAX_COLLECTION_NAME, newCollectionProblem, type SavedCollection } from '../../utils/collections';
 import { ContentCard } from '../../components/ContentCard/ContentCard';
-import { CONTENT_TYPES, FormatChips } from '../../components/FormatChips/FormatChips';
+import { FormatChips } from '../../components/FormatChips/FormatChips';
 import { DeleteCollection } from './DeleteCollection';
 import Spinner from '../../components/Spinner/Spinner';
 import { StatusIcon } from '../../components/StatusIcon/StatusIcon';

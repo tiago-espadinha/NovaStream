@@ -54,22 +54,21 @@ export function Shelf({
     };
     // Shift + wheel scrolls sideways. Wheel steps add to a target that the track eases toward,
     // so a notched mouse glides instead of jumping.
-    let target = track.scrollLeft;
-    let frame = 0;
+    const scroll = { target: track.scrollLeft, frame: 0 };
     const glide = () => {
-      const distance = target - track.scrollLeft;
+      const distance = scroll.target - track.scrollLeft;
       // scrollLeft snaps to whole pixels, so steps under 1px would never arrive.
       if (Math.abs(distance) <= 1) {
-        track.scrollLeft = target;
-        frame = 0;
+        track.scrollLeft = scroll.target;
+        scroll.frame = 0;
         return;
       }
       track.scrollLeft += Math.sign(distance) * Math.max(1, Math.abs(distance) * 0.2);
-      frame = requestAnimationFrame(glide);
+      scroll.frame = requestAnimationFrame(glide);
     };
     const stopGlide = () => {
-      cancelAnimationFrame(frame);
-      frame = 0;
+      cancelAnimationFrame(scroll.frame);
+      scroll.frame = 0;
     };
     stopGlideRef.current = stopGlide;
     const onWheel = (event: WheelEvent) => {
@@ -77,12 +76,12 @@ export function Shelf({
       event.preventDefault();
       const max = track.scrollWidth - track.clientWidth;
       const delta = event.deltaMode === WheelEvent.DOM_DELTA_LINE ? event.deltaY * 40 : event.deltaY;
-      target = Math.min(max, Math.max(0, (frame ? target : track.scrollLeft) + delta));
+      scroll.target = Math.min(max, Math.max(0, (scroll.frame ? scroll.target : track.scrollLeft) + delta));
       if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        track.scrollLeft = target;
+        track.scrollLeft = scroll.target;
         return;
       }
-      if (!frame) frame = requestAnimationFrame(glide);
+      if (!scroll.frame) scroll.frame = requestAnimationFrame(glide);
     };
     update();
     track.addEventListener('scroll', update, { passive: true });

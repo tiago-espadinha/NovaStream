@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { currentLocale } from '../../i18n';
 import { useDialog } from '../../hooks/useDialog';
@@ -72,11 +72,12 @@ export function MediaDetail({
   const [viewingArtwork, setViewingArtwork] = useState(false);
 
   // After useDialog has focused Close, which stays the fallback when the card is gone.
+  // Only on opening: later re-renders must not pull focus back, so the target is read once.
+  const focusTarget = useRef(returnFocusTo);
   useEffect(() => {
-    if (!returnFocusTo) return;
-    panelRef.current?.querySelector<HTMLElement>(`[data-id="${CSS.escape(returnFocusTo)}"] .card-open`)?.focus();
-    // Only on opening: later re-renders must not pull focus back.
-  }, []);
+    if (!focusTarget.current) return;
+    panelRef.current?.querySelector<HTMLElement>(`[data-id="${CSS.escape(focusTarget.current)}"] .card-open`)?.focus();
+  }, [panelRef]);
   const streamingPlatforms = item.platforms
     .filter((platform) => platform.startsWith('Streaming on '))
     .map((platform) => platform.slice('Streaming on '.length));

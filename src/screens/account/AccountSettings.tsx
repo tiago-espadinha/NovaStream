@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../context/AuthContext';
+import { useAuth } from '../../context/useAuth';
 import { useDialog } from '../../hooks/useDialog';
 import { ApiError } from '../../services/apiService';
 import { describeAccountError, isSessionEnded } from '../../utils/accountErrors';

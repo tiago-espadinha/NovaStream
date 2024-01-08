@@ -1,5 +1,4 @@
 @layer screens {
-  /* results header, toolbar and states */
   .results-head {
     display: flex;
     flex-wrap: wrap;

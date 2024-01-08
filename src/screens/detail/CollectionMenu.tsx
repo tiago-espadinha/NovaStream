@@ -61,11 +61,8 @@ export function CollectionMenu({
     setPosition({ placement, maxHeight: height > room ? Math.max(room, 160) : undefined });
   }, [open, creating]);
 
-  useEffect(() => {
-    if (open) return;
-    setCreating(false);
-    setCreated(null);
-  }, [open]);
+  if (!open && creating) setCreating(false);
+  if (!open && created !== null) setCreated(null);
 
   // Leaving the form puts focus back where it was opened from.
   useEffect(() => {

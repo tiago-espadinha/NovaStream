@@ -1,4 +1,9 @@
 @layer screens {
+  @media (max-width: 767px) {
+    .confirm-delete-body {
+      padding-inline: var(--space-4);
+    }
+  }
   .confirm-delete {
     width: min(440px, 100%);
   }

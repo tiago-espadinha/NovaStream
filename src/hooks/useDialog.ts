@@ -17,7 +17,9 @@ const FOCUSABLE =
 export function useDialog<T extends HTMLElement>(onClose: () => void) {
   const panelRef = useRef<T>(null);
   const onCloseRef = useRef(onClose);
-  onCloseRef.current = onClose;
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const panel = panelRef.current;

@@ -1,12 +1,4 @@
 @layer screens {
-  .btn:disabled,
-  .choice-chip:has(input:disabled),
-  .new-collection input:disabled,
-  .popover-create input:disabled {
-    cursor: not-allowed;
-    opacity: 0.55;
-  }
-  /* auth modal */
   .auth-panel {
     position: relative;
     width: min(420px, 100%);
@@ -70,6 +62,18 @@
     background: var(--color-danger-surface);
     font-size: var(--font-size-small);
   }
+  /* An inline next step inside the error, e.g. "Sign in instead" for a taken email. */
+  .auth-error-action {
+    min-height: 24px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-secondary);
+    font: inherit;
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+  }
   .auth-switch {
     width: 100%;
     min-height: 44px;
@@ -83,7 +87,6 @@
   .auth-switch:hover {
     text-decoration: underline;
   }
-  /* account settings modal */
   .account-panel {
     width: min(460px, 100%);
   }

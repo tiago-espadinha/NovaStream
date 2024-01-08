@@ -58,10 +58,6 @@ async function lastfmFetch(params) {
   return data;
 }
 
-function encodeId(artist, album) {
-  return encodeURIComponent(`${artist}|||${album}`);
-}
-
 function musicId(kind, artist, title) {
   const identity = kind === 'artist' ? `${kind}|||${artist}` : `${kind}|||${artist}|||${title}`;
   return buildId('music', encodeURIComponent(identity));

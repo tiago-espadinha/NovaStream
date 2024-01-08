@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import * as api from '../services/apiService';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../context/useAuth';
 import i18n from '../i18n';
 import type { ContentType, MediaSummary } from '../types';
 import { describeAccountError, isSessionEnded } from '../utils/accountErrors';
@@ -118,7 +118,9 @@ export function useCollections() {
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [saveError, setSaveError] = useState<string | null>(null);
   const tokenRef = useRef(token);
-  tokenRef.current = token;
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
   // The newest document waiting to be saved, tagged with the account it belongs to. Only the
   // newest matters: each save replaces the whole document.
   const nextSave = useRef<{ token: string; doc: CollectionsDoc } | null>(null);
@@ -129,16 +131,21 @@ export function useCollections() {
   useEffect(() => writeGuestCollections(guestDoc), [guestDoc]);
 
   // An error is about the account it happened in; it doesn't survive signing in or out.
-  useEffect(() => setSaveError(null), [token]);
+  const [errorToken, setErrorToken] = useState(token);
+  if (token !== errorToken) {
+    setErrorToken(token);
+    setSaveError(null);
+  }
 
   useEffect(() => {
     if (!token) return;
-    let active = true;
+    const request = new AbortController();
+    // oxlint-disable-next-line react/set-state-in-effect -- Starting a request: its loading state belongs here.
     setAccount({ token, doc: EMPTY_COLLECTIONS, status: 'loading', edits: 0 });
     api
       .getCollections(token)
       .then(({ collections }) => {
-        if (!active) return;
+        if (request.signal.aborted) return;
         // Read from storage, not memory: another tab may already have merged and cleared it.
         const guest = readGuestCollections();
         const merged = isEmptyCollections(guest) ? null : pruned(mergeCollections(collections, guest));
@@ -152,13 +159,11 @@ export function useCollections() {
         setAccount({ token, doc: merging ? merged : collections, status: 'ready', edits: merging ? 1 : 0 });
       })
       .catch((err) => {
-        if (!active) return;
+        if (request.signal.aborted) return;
         setAccount((current) => ({ ...current, status: 'error' }));
         if (isSessionEnded(err)) endSession();
       });
-    return () => {
-      active = false;
-    };
+    return () => request.abort();
   }, [token, loadAttempt, endSession]);
 
   // Saves one document at a time. A save for an account that's no longer signed in is
@@ -207,11 +212,17 @@ export function useCollections() {
 
   // Keyed on the edit counter alone: a load replaces the document without counting as an
   // edit, so only local changes (and a guest merge) are saved.
+  const latest = useRef({ token, account });
   useEffect(() => {
+    latest.current = { token, account };
+  }, [token, account]);
+  useEffect(() => {
+    const { token, account } = latest.current;
     if (!token || account.token !== token || account.edits === 0) return;
     nextSave.current = { token, doc: account.doc };
+    // oxlint-disable-next-line react/set-state-in-effect -- Starting a save: it reports back once the server answers.
     persist();
-  }, [account.edits]);
+  }, [account.edits, persist]);
 
   const accountReady = Boolean(token) && account.token === token && account.status === 'ready';
   const doc = token ? (account.token === token ? account.doc : EMPTY_COLLECTIONS) : guestDoc;

@@ -1,9 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import type { ContentType } from '../../types';
-import { CONTENT_TYPE_LABELS } from '../../types';
+import { CONTENT_TYPE_LABELS, CONTENT_TYPES } from '../../types';
 import { ToggleChip } from '../ToggleChip/ToggleChip';
-
-export const CONTENT_TYPES = Object.keys(CONTENT_TYPE_LABELS) as ContentType[];
 
 interface FormatChipsProps {
   selected: ContentType[];
